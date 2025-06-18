@@ -1,0 +1,139 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "kubectl apply - デプロイメント実行",
+      "type": "shell",
+      "command": "kubectl",
+      "args": [
+        "apply",
+        "-f",
+        "${workspaceFolder}/hands-on/sample-app/kubernetes/"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "kubectl delete - リソース削除",
+      "type": "shell",
+      "command": "kubectl",
+      "args": [
+        "delete",
+        "-f",
+        "${workspaceFolder}/hands-on/sample-app/kubernetes/"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "kubectl get pods - Pod状態確認",
+      "type": "shell",
+      "command": "kubectl",
+      "args": [
+        "get",
+        "pods",
+        "-o",
+        "wide"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "kubectl get services - サービス状態確認",
+      "type": "shell",
+      "command": "kubectl",
+      "args": [
+        "get",
+        "services"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Docker build - サンプルアプリ",
+      "type": "shell",
+      "command": "docker",
+      "args": [
+        "build",
+        "-t",
+        "k8s-sample-app:latest",
+        "./hands-on/sample-app/app"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Minikube start - ローカルクラスター起動",
+      "type": "shell",
+      "command": "minikube",
+      "args": [
+        "start"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "isBackground": true
+    },
+    {
+      "label": "Helm install - サンプルアプリ",
+      "type": "shell",
+      "command": "helm",
+      "args": [
+        "install",
+        "sample-app",
+        "./hands-on/sample-app/helm-chart/"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    }
+  ]
+}

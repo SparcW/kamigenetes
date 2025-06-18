@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "ms-vscode.vscode-docker",
+    "redhat.vscode-yaml",
+    "ms-vscode.powershell",
+    "humao.rest-client",
+    "ms-azure-devops.azure-pipelines",
+    "ms-vscode-remote.remote-containers",
+    "tim-koehler.helm-intellisense",
+    "ipedrazas.kubernetes-snippets",
+    "lunuan.kubernetes-templates"
+  ]
+}

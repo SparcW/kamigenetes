@@ -1,0 +1,87 @@
+# PostgreSQL Deployment
+# AWS ECSのサービス・タスク定義に相当
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+  namespace: sample-app
+  labels:
+    app: sample-app
+    component: postgres
+    tier: database
+spec:
+  replicas: 1  # PostgreSQLは通常単一インスタンス
+  selector:
+    matchLabels:
+      app: sample-app
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: sample-app
+        component: postgres
+        tier: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        # ConfigMapから環境変数を取得
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_NAME
+        # Secretから機密情報を取得
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_USERNAME
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_PASSWORD
+        # 永続化ボリュームをマウント
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+          subPath: postgres  # データディレクトリのサブパス
+        # リソース制限（AWS ECSのタスクサイズに相当）
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        # ヘルスチェック（AWS ECSのヘルスチェックに相当）
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+      # ノード選択（必要に応じて）
+      nodeSelector:
+        kubernetes.io/os: linux

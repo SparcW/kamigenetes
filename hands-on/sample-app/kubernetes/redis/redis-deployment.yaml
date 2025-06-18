@@ -1,0 +1,80 @@
+# Redis Deployment
+# AWS ECSのサービス・タスク定義に相当（ElastiCacheの代替）
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  namespace: sample-app
+  labels:
+    app: sample-app
+    component: redis
+    tier: cache
+spec:
+  replicas: 1  # 単一インスタンス（本番環境ではRedis Clusterを検討）
+  selector:
+    matchLabels:
+      app: sample-app
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: sample-app
+        component: redis
+        tier: cache
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        # Redis設定
+        command:
+          - redis-server
+          - --appendonly
+          - "yes"
+          - --maxmemory
+          - "128mb"
+          - --maxmemory-policy
+          - "allkeys-lru"
+        # 環境変数（必要に応じて）
+        env:
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: REDIS_PORT
+        # リソース制限
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        # ヘルスチェック
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+        # 永続化ボリューム（オプション）
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        emptyDir: {}  # 本番環境では永続ボリュームを使用
+      nodeSelector:
+        kubernetes.io/os: linux

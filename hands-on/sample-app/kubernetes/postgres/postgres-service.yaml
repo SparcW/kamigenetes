@@ -1,0 +1,21 @@
+# PostgreSQL Service
+# AWS ECSのサービスディスカバリ、ALBターゲットグループに相当
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: sample-app
+  labels:
+    app: sample-app
+    component: postgres
+    tier: database
+spec:
+  type: ClusterIP  # クラスター内部からのみアクセス可能
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: sample-app
+    component: postgres

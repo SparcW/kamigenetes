@@ -1,0 +1,57 @@
+# Web Application Service
+# AWS ECSのALB、ターゲットグループに相当
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  namespace: sample-app
+  labels:
+    app: sample-app
+    component: web
+    tier: frontend
+spec:
+  type: ClusterIP  # Ingressを使用してアクセスを公開
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: sample-app
+    component: web
+
+---
+# Ingress - 外部からのアクセス管理
+# AWS ECSのALBに相当
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-ingress
+  namespace: sample-app
+  labels:
+    app: sample-app
+    component: web
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # レート制限（オプション）
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  ingressClassName: nginx  # 使用するIngressコントローラー
+  rules:
+  - host: sample-app.local  # ローカル開発用ホスト名
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-service
+            port:
+              number: 80
+  # TLS設定（オプション）
+  # tls:
+  # - hosts:
+  #   - sample-app.local
+  #   secretName: tls-secret
