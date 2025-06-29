@@ -1,0 +1,45 @@
+# 8080ポートでサービスを公開する例
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-8080
+  labels:
+    app: webapp-8080
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp-8080
+  template:
+    metadata:
+      labels:
+        app: webapp-8080
+    spec:
+      containers:
+      - name: webapp
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-8080-service
+  labels:
+    app: webapp-8080
+spec:
+  selector:
+    app: webapp-8080
+  ports:
+  - name: http
+    port: 8080        # サービスが公開するポート
+    targetPort: 80    # コンテナの実際のポート
+    protocol: TCP
+  type: LoadBalancer

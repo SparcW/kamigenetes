@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s  # スクレイプ間隔を15秒に設定
+
+scrape_configs:
+  - job_name: 'kubernetes-apis'
+    kubernetes_sd_configs:
+      - role: endpoints
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: default  # defaultネームスペースのエンドポイントのみを対象
+
+  - job_name: 'kubernetes-nodes'
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_node_name]
+        action: keep
+        regex: .+  # すべてのノードを対象
+
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: hono-api  # hono-apiラベルを持つポッドのみを対象
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093  # Alertmanagerのターゲット設定
+
+rule_files:
+  - "alert.rules"  # アラートルールファイルの指定
+
+# 追加の設定が必要な場合はここに記述してください。

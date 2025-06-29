@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        # リソース要求と制限を設定（ECSのタスク定義におけるCPU/メモリ指定と同様）
+        resources:
+          requests:
+            cpu: "100m"      # 最低限必要なCPU
+            memory: "128Mi"  # 最低限必要なメモリ
+          limits:
+            cpu: "250m"      # 最大利用可能なCPU
+            memory: "256Mi"  # 最大利用可能なメモリ

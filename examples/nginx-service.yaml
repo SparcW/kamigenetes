@@ -1,0 +1,13 @@
+# nginx-service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+  - protocol: TCP
+    port: 80        # サービスのポート
+    targetPort: 80  # コンテナのポート
+  type: LoadBalancer  # AWS ALB/NLBに相当

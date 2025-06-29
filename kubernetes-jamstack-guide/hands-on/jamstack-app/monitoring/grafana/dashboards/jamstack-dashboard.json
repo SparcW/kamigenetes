@@ -1,0 +1,97 @@
+{
+  "annotations": [],
+  "description": "JAMStackアプリケーションのモニタリング用ダッシュボード",
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "type": "graph",
+      "title": "APIリクエスト数",
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[5m])",
+          "legendFormat": "{{method}} {{route}}",
+          "refId": "A"
+        }
+      ],
+      "xaxis": {
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "リクエスト数",
+          "logBase": 1,
+          "min": 0
+        },
+        {
+          "format": "short",
+          "label": "リクエスト数",
+          "logBase": 1,
+          "min": 0
+        }
+      ]
+    },
+    {
+      "datasource": "Prometheus",
+      "type": "graph",
+      "title": "エラーレート",
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{status!=\"200\"}[5m]) / rate(http_requests_total[5m])",
+          "legendFormat": "{{method}} {{route}}",
+          "refId": "B"
+        }
+      ],
+      "xaxis": {
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": "エラーレート",
+          "logBase": 1,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "format": "short",
+          "label": "エラーレート",
+          "logBase": 1,
+          "min": 0,
+          "max": 1
+        }
+      ]
+    },
+    {
+      "datasource": "Prometheus",
+      "type": "graph",
+      "title": "レスポンスタイム",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "95パーセンタイル",
+          "refId": "C"
+        }
+      ],
+      "xaxis": {
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "format": "seconds",
+          "label": "レスポンスタイム",
+          "logBase": 1,
+          "min": 0
+        },
+        {
+          "format": "short",
+          "label": "レスポンスタイム",
+          "logBase": 1,
+          "min": 0
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 16,
+  "version": 1
+}

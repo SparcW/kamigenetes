@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hono-api
+  labels:
+    app: hono-api
+spec:
+  replicas: 2  # レプリカ数を指定
+  selector:
+    matchLabels:
+      app: hono-api
+  template:
+    metadata:
+      labels:
+        app: hono-api
+    spec:
+      containers:
+        - name: hono-api
+          image: my-hono-api:latest  # Dockerイメージ名を指定
+          ports:
+            - containerPort: 3000  # コンテナのポートを指定
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:mysecretpassword@my-postgres.default.svc.cluster.local:5432/postgres"  # データベース接続情報
+          resources:
+            requests:
+              memory: "256Mi"  # メモリリクエスト
+              cpu: "250m"  # CPUリクエスト
+            limits:
+              memory: "512Mi"  # メモリ制限
+              cpu: "500m"  # CPU制限
+      imagePullSecrets:
+        - name: regcred  # プライベートレジストリの認証情報（必要に応じて）

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: remix-frontend
+  labels:
+    app: remix-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: remix-frontend
+  template:
+    metadata:
+      labels:
+        app: remix-frontend
+    spec:
+      containers:
+        - name: remix-frontend
+          image: <your-docker-image>  # Dockerイメージ名を指定してください
+          ports:
+            - containerPort: 3000
+          env:
+            - name: API_URL
+              value: "http://<your-api-url>/api"  # APIのURLを指定してください
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
