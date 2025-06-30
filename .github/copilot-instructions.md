@@ -25,6 +25,3 @@
 - Helm
 - AWS EKS
 - モニタリングとロギング
- - モニタリングの実装例(Graphana)
- - ログ転送の実装例(fluentd)
-- Volumeの概要及び実装例

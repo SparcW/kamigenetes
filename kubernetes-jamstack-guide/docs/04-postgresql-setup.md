@@ -104,6 +104,99 @@ kubectl apply -f hands-on/jamstack-app/database/k8s/init-scripts.yaml
 
 ジョブが完了したら、データベースが正常に初期化されたことを確認できます。
 
+## ステップ8: Volumeの概要と重要性
+
+### Volumeとは
+
+VolumeはKubernetesにおいてPodがデータを永続化するためのメカニズムです。PostgreSQLのようなデータベースでは、Podが再起動や削除されてもデータが失われないよう、適切なVolumeの設定が必要不可欠です。
+
+### PostgreSQLにおけるVolumeの重要性
+
+データベースは状態を持つアプリケーション（Stateful Application）です。Podが削除されてもデータが保持される必要があります。これを実現するためにVolumeを使用します。
+
+#### AWS ECSとの比較
+- **AWS ECS**: EFSやEBSボリュームをタスク定義で指定
+- **Kubernetes**: PersistentVolume (PV)とPersistentVolumeClaim (PVC)を使用
+
+### Volumeの種類
+
+#### 1. emptyDir
+- Podと同じライフサイクル
+- 一時的なデータ保存に適用
+- PostgreSQLには**推奨されません**
+
+#### 2. hostPath
+- ノードのファイルシステムをマウント
+- 単一ノード環境でのみ使用可能
+- 本番環境では**推奨されません**
+
+#### 3. PersistentVolume (PV) と PersistentVolumeClaim (PVC)
+- 永続的なデータ保存
+- PostgreSQLに**最適**
+- クラウドプロバイダーのストレージサービスと連携可能
+
+### PostgreSQL用のPVCの設定例
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+```
+
+### Helmを使用したPostgreSQLでのVolume設定
+
+Bitnamiのpostgreslql Helmチャートでは、以下のパラメータでVolumeを設定できます：
+
+```bash
+helm install my-postgres bitnami/postgresql \
+  --set postgresqlPassword=mysecretpassword \
+  --set persistence.enabled=true \
+  --set persistence.size=10Gi \
+  --set persistence.storageClass=standard
+```
+
+### Volume設定のベストプラクティス
+
+1. **適切なストレージサイズの設定**
+   - 予想されるデータサイズの2-3倍を確保
+
+2. **ストレージクラスの選択**
+   - 本番環境では高性能・高可用性のストレージクラスを選択
+
+3. **バックアップ戦略**
+   - VolumeSnapshotを活用したバックアップ
+
+4. **アクセスモードの理解**
+   - ReadWriteOnce: 単一ノードからの読み書き（PostgreSQLに適用）
+   - ReadOnlyMany: 複数ノードからの読み取り専用
+   - ReadWriteMany: 複数ノードからの読み書き
+
+### Volumeのトラブルシューティング
+
+#### PVCがPendingの場合
+```bash
+kubectl describe pvc postgres-pvc
+```
+
+#### ストレージ容量の確認
+```bash
+kubectl get pv
+kubectl get pvc
+```
+
+#### Podのマウント状況確認
+```bash
+kubectl describe pod <postgres-pod-name>
+```
+
 ## 結論
 
 これで、Kubernetes上にPostgreSQLをインストールし、初期化スクリプトを実行する手順が完了しました。次のステップでは、APIの開発に進むことができます。
