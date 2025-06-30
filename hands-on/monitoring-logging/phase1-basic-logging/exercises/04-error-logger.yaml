@@ -1,0 +1,49 @@
+# 04-error-logger.yaml - エラーログフィルタリング学習用
+apiVersion: v1
+kind: Pod
+metadata:
+  name: error-logger
+  labels:
+    app: error-logger
+    phase: basic-logging
+spec:
+  containers:
+  - name: error-generator
+    image: busybox
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "エラーログ生成器を開始します"
+        counter=0
+        while true; do
+          case $((counter % 8)) in
+            0|1|2)
+              echo "$(date) INFO: 正常な処理が完了しました #$counter"
+              ;;
+            3)
+              echo "$(date) WARNING: リソース使用率が高くなっています #$counter"
+              ;;
+            4)
+              echo "$(date) ERROR: データベース接続に失敗しました #$counter"
+              ;;
+            5)
+              echo "$(date) DEBUG: デバッグ情報 - 変数値: var=$counter"
+              ;;
+            6)
+              echo "$(date) FATAL: 致命的なエラーが発生しました #$counter"
+              ;;
+            7)
+              echo "$(date) TRACE: トレース情報 - 関数呼び出し完了 #$counter"
+              ;;
+          esac
+          counter=$((counter + 1))
+          sleep 2
+        done
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+  restartPolicy: Always

@@ -1,0 +1,59 @@
+# 05-json-logger.yaml - JSON形式ログ解析学習用
+apiVersion: v1
+kind: Pod
+metadata:
+  name: json-logger
+  labels:
+    app: json-logger
+    phase: basic-logging
+spec:
+  containers:
+  - name: json-generator
+    image: busybox
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "JSON形式ログ生成器を開始します"
+        counter=0
+        user_ids=(1001 1002 1003 1004 1005)
+        while true; do
+          timestamp=$(date -Iseconds)
+          user_id=${user_ids[$((counter % 5))]}
+          
+          case $((counter % 6)) in
+            0|1|2)
+              level="info"
+              message="ユーザー認証が成功しました"
+              status_code=200
+              ;;
+            3)
+              level="warning"
+              message="認証トークンの有効期限が近づいています"
+              status_code=200
+              ;;
+            4)
+              level="error"
+              message="認証に失敗しました"
+              status_code=401
+              ;;
+            5)
+              level="error"
+              message="内部サーバーエラーが発生しました"
+              status_code=500
+              ;;
+          esac
+          
+          # JSON形式でログ出力
+          echo "{\"timestamp\":\"$timestamp\",\"level\":\"$level\",\"message\":\"$message\",\"user_id\":$user_id,\"status_code\":$status_code,\"request_id\":\"req-$counter\",\"service\":\"auth-service\"}"
+          
+          counter=$((counter + 1))
+          sleep 3
+        done
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+  restartPolicy: Always

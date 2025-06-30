@@ -1,0 +1,29 @@
+# 01-simple-logger.yaml - シンプルなログ出力Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simple-logger
+  labels:
+    app: simple-logger
+    phase: basic-logging
+spec:
+  containers:
+  - name: logger
+    image: busybox
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        counter=0
+        while true; do
+          echo "$(date): ログメッセージ #$counter - シンプルなログ出力テスト"
+          counter=$((counter + 1))
+          sleep 3
+        done
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+  restartPolicy: Always

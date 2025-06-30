@@ -1,0 +1,63 @@
+# 99-failure-scenario.yaml - 障害調査チャレンジ用
+# このファイルは意図的に問題を含んでいます
+# kubectl logsを使って問題を特定し、解決してください
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mystery-failure
+  labels:
+    app: mystery-failure
+    challenge: troubleshooting
+spec:
+  containers:
+  - name: failing-app
+    image: busybox
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "アプリケーション開始..."
+        echo "初期化処理中..."
+        sleep 5
+        
+        echo "設定ファイルを読み込み中..."
+        # 存在しないファイルを読み込もうとしてエラー
+        cat /nonexistent/config.yml
+        
+        echo "この行は実行されません"
+        while true; do
+          echo "正常動作中"
+          sleep 10
+        done
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+  
+  - name: sidecar-app
+    image: busybox
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "サイドカー開始..."
+        sleep 3
+        
+        # メモリ制限を超えるような処理をシミュレート
+        echo "大量データ処理開始..."
+        # 実際にはbusyboxでは簡単にOOMを起こせないので、
+        # エラーをログに出力
+        echo "ERROR: メモリ不足によりプロセスが終了しました"
+        echo "ERROR: Out of memory error occurred"
+        exit 137  # OOMKilledを模擬
+    resources:
+      requests:
+        memory: "16Mi"
+        cpu: "25m"
+      limits:
+        memory: "32Mi"  # 意図的に小さく設定
+        cpu: "50m"
+  
+  restartPolicy: Always

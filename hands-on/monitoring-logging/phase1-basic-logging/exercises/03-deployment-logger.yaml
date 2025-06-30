@@ -1,0 +1,61 @@
+# 03-deployment-logger.yaml - Deploymentでのログ操作学習
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-logger
+  labels:
+    app: web-logger
+    phase: basic-logging
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-logger
+  template:
+    metadata:
+      labels:
+        app: web-logger
+        version: v1
+    spec:
+      containers:
+      - name: web-app
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "WebアプリケーションPod開始: $(hostname)"
+            request_count=0
+            while true; do
+              # 通常のリクエストログ
+              echo "[$(hostname)] $(date): GET /api/users - 200 OK (${request_count})"
+              request_count=$((request_count + 1))
+              
+              # 時々警告ログ
+              if [ $((request_count % 15)) -eq 0 ]; then
+                echo "[$(hostname)] $(date): WARNING - 高負荷を検出しました"
+              fi
+              
+              # 時々エラーログ
+              if [ $((request_count % 25)) -eq 0 ]; then
+                echo "[$(hostname)] $(date): ERROR - データベース接続タイムアウト"
+              fi
+              
+              sleep 4
+            done
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+      restartPolicy: Always
