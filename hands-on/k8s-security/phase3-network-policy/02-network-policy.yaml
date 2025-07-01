@@ -1,0 +1,357 @@
+# NetworkPolicy 設定
+# 3層アプリケーションのネットワーク分離とセキュリティ制御
+---
+# デフォルト拒否ポリシー - 全ての受信通信を拒否
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: security-demo
+  labels:
+    policy-type: default-deny
+  annotations:
+    description: "デフォルト受信拒否ポリシー"
+    aws-ecs-equivalent: "Security Group default deny"
+spec:
+  podSelector: {}  # 全てのPodに適用
+  policyTypes:
+  - Ingress
+
+---
+# デフォルト送信拒否ポリシー - 全ての送信通信を拒否
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  namespace: security-demo
+  labels:
+    policy-type: default-deny
+  annotations:
+    description: "デフォルト送信拒否ポリシー"
+    aws-ecs-equivalent: "Security Group default deny outbound"
+spec:
+  podSelector: {}  # 全てのPodに適用
+  policyTypes:
+  - Egress
+
+---
+# Frontend Ingress ポリシー - LoadBalancer からの HTTP/HTTPS 受信許可
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-ingress-policy
+  namespace: security-demo
+  labels:
+    app: frontend
+    policy-type: ingress
+  annotations:
+    description: "フロントエンド受信ポリシー - 外部からのHTTP/HTTPS許可"
+    aws-ecs-equivalent: "ALB Security Group - Port 80/443"
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+      tier: web
+  policyTypes:
+  - Ingress
+  ingress:
+  # 外部からのHTTPトラフィック許可
+  - from: []  # すべての送信元を許可（LoadBalancer経由）
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+
+---
+# Frontend Egress ポリシー - Backend API への送信許可
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-egress-policy
+  namespace: security-demo
+  labels:
+    app: frontend
+    policy-type: egress
+  annotations:
+    description: "フロントエンド送信ポリシー - BackendAPIとDNSへの通信許可"
+    aws-ecs-equivalent: "Frontend Security Group outbound rules"
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+      tier: web
+  policyTypes:
+  - Egress
+  egress:
+  # DNS 通信許可
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  # Backend API への通信許可
+  - to:
+    - podSelector:
+        matchLabels:
+          app: backend
+          tier: api
+    ports:
+    - protocol: TCP
+      port: 8080
+
+---
+# Backend Ingress ポリシー - Frontend からの API 受信許可
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-ingress-policy
+  namespace: security-demo
+  labels:
+    app: backend
+    policy-type: ingress
+  annotations:
+    description: "バックエンド受信ポリシー - Frontendからのみ許可"
+    aws-ecs-equivalent: "API Security Group - Frontend SG からのみ"
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+      tier: api
+  policyTypes:
+  - Ingress
+  ingress:
+  # Frontend からの API 通信のみ許可
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+          tier: web
+    ports:
+    - protocol: TCP
+      port: 8080
+
+---
+# Backend Egress ポリシー - Database への送信許可
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-egress-policy
+  namespace: security-demo
+  labels:
+    app: backend
+    policy-type: egress
+  annotations:
+    description: "バックエンド送信ポリシー - DatabaseとDNSへの通信許可"
+    aws-ecs-equivalent: "API Security Group outbound to RDS"
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+      tier: api
+  policyTypes:
+  - Egress
+  egress:
+  # DNS 通信許可
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  # Database への通信許可
+  - to:
+    - podSelector:
+        matchLabels:
+          app: database
+          tier: data
+    ports:
+    - protocol: TCP
+      port: 5432
+
+---
+# Database Ingress ポリシー - Backend からのDB接続受信許可
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-ingress-policy
+  namespace: security-demo
+  labels:
+    app: database
+    policy-type: ingress
+  annotations:
+    description: "データベース受信ポリシー - Backendからのみ許可"
+    aws-ecs-equivalent: "RDS Security Group - API SG からのみ"
+spec:
+  podSelector:
+    matchLabels:
+      app: database
+      tier: data
+  policyTypes:
+  - Ingress
+  ingress:
+  # Backend からのデータベース接続のみ許可
+  - from:
+    - podSelector:
+        matchLabels:
+          app: backend
+          tier: api
+    ports:
+    - protocol: TCP
+      port: 5432
+
+---
+# Database Egress ポリシー - 外部通信を最小限に制限
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-egress-policy
+  namespace: security-demo
+  labels:
+    app: database
+    policy-type: egress
+  annotations:
+    description: "データベース送信ポリシー - DNS通信のみ許可"
+    aws-ecs-equivalent: "RDS Security Group outbound minimal"
+spec:
+  podSelector:
+    matchLabels:
+      app: database
+      tier: data
+  policyTypes:
+  - Egress
+  egress:
+  # DNS 通信のみ許可（最小権限）
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+
+---
+# テスト用Pod特別ポリシー - デバッグ時のネットワークテスト用
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: network-test-policy
+  namespace: security-demo
+  labels:
+    app: network-test
+    policy-type: testing
+  annotations:
+    description: "ネットワークテスト用Pod - 一時的な通信許可"
+    aws-ecs-equivalent: "Temporary debug Security Group"
+spec:
+  podSelector:
+    matchLabels:
+      app: network-test
+      role: testing
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 管理者からのアクセス許可
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 22  # SSH (通常は使用しない)
+  egress:
+  # DNS 通信許可
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  # アプリケーション全体への接続テスト用
+  - to:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    ports:
+    - protocol: TCP
+      port: 80
+  - to:
+    - podSelector:
+        matchLabels:
+          app: backend
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to:
+    - podSelector:
+        matchLabels:
+          app: database
+    ports:
+    - protocol: TCP
+      port: 5432
+
+---
+# Namespace間通信制御ポリシー - 他のNamespaceからのアクセス拒否
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: namespace-isolation-policy
+  namespace: security-demo
+  labels:
+    policy-type: namespace-isolation
+  annotations:
+    description: "Namespace分離ポリシー - 同一Namespace内通信のみ許可"
+    aws-ecs-equivalent: "VPC isolation with separate subnets"
+spec:
+  podSelector: {}  # 全てのPodに適用
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # 同一Namespace内のPodからのみ受信許可
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: security-demo
+  egress:
+  # 同一Namespace内のPodへのみ送信許可 + DNS
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: security-demo
+
+---
+# 監視・メトリクス用特別ポリシー
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-access-policy
+  namespace: security-demo
+  labels:
+    policy-type: monitoring
+  annotations:
+    description: "監視システムからのメトリクス収集許可"
+    aws-ecs-equivalent: "CloudWatch agent access"
+spec:
+  podSelector: {}  # 全てのPodに適用
+  policyTypes:
+  - Ingress
+  ingress:
+  # kube-system namespace からの監視トラフィック許可
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 80     # HTTP health checks
+    - protocol: TCP
+      port: 8080   # API metrics
+    - protocol: TCP
+      port: 9090   # Prometheus metrics
+    - protocol: TCP
+      port: 10254  # Nginx metrics

@@ -1,0 +1,211 @@
+# Demo Web Application Deployment
+# AWS ECSのTaskDefinitionとServiceに相当
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app
+  namespace: gateway-demo
+  labels:
+    app: demo-app
+    version: v1.0.0
+    tier: frontend
+  annotations:
+    # AWS ECS比較: ECSサービスの設定に相当
+    description: "Demo web application for Gateway API learning"
+spec:
+  # レプリカ数（ECSサービスのDesired Countに相当）
+  replicas: 3
+  
+  # ローリングアップデート戦略
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  
+  selector:
+    matchLabels:
+      app: demo-app
+  
+  template:
+    metadata:
+      labels:
+        app: demo-app
+        version: v1.0.0
+        tier: frontend
+    spec:
+      # セキュリティコンテキスト
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      
+      containers:
+      - name: web-server
+        # 軽量なWebサーバーイメージ
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        
+        # リソース制限（ECSタスク定義のCPU/メモリに相当）
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        
+        # ヘルスチェック（ECSヘルスチェックに相当）
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        
+        # 環境変数
+        env:
+        - name: ENVIRONMENT
+          value: "gateway-demo"
+        - name: VERSION
+          value: "v1.0.0"
+        
+        # カスタムHTMLをボリュームマウント
+        volumeMounts:
+        - name: custom-html
+          mountPath: /usr/share/nginx/html
+          readOnly: true
+      
+      volumes:
+      - name: custom-html
+        configMap:
+          name: demo-app-html
+
+---
+# カスタムHTMLコンテンツ
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-app-html
+  namespace: gateway-demo
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gateway API Demo</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .container {
+                text-align: center;
+                background: rgba(255, 255, 255, 0.1);
+                padding: 40px;
+                border-radius: 15px;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            }
+            h1 {
+                font-size: 3em;
+                margin-bottom: 20px;
+            }
+            .info {
+                background: rgba(255, 255, 255, 0.2);
+                padding: 20px;
+                border-radius: 10px;
+                margin: 20px 0;
+            }
+            .comparison {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-top: 30px;
+            }
+            .aws-ecs, .k8s-gateway {
+                background: rgba(255, 255, 255, 0.1);
+                padding: 15px;
+                border-radius: 8px;
+            }
+            .aws-ecs {
+                border-left: 4px solid #ff9900;
+            }
+            .k8s-gateway {
+                border-left: 4px solid #326ce5;
+            }
+            code {
+                background: rgba(0, 0, 0, 0.3);
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'Courier New', monospace;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎯 Gateway API Demo</h1>
+            <div class="info">
+                <h2>✅ Gateway API が正常に動作しています！</h2>
+                <p>Version: <code>v1.0.0</code></p>
+                <p>Environment: <code>gateway-demo</code></p>
+                <p>Hostname: <code id="hostname"></code></p>
+            </div>
+            
+            <div class="comparison">
+                <div class="aws-ecs">
+                    <h3>🚀 AWS ECS + ALB</h3>
+                    <ul style="text-align: left;">
+                        <li>Application Load Balancer</li>
+                        <li>Target Groups</li>
+                        <li>Listener Rules</li>
+                        <li>ECS Service</li>
+                    </ul>
+                </div>
+                <div class="k8s-gateway">
+                    <h3>☸️ Kubernetes Gateway API</h3>
+                    <ul style="text-align: left;">
+                        <li>Gateway</li>
+                        <li>HTTPRoute</li>
+                        <li>Service</li>
+                        <li>Deployment</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info">
+                <h3>🔗 リクエスト情報</h3>
+                <p>URL: <code id="url"></code></p>
+                <p>User-Agent: <code id="userAgent"></code></p>
+                <p>Timestamp: <code id="timestamp"></code></p>
+            </div>
+        </div>
+        
+        <script>
+            // 動的な情報を表示
+            document.getElementById('hostname').textContent = window.location.hostname;
+            document.getElementById('url').textContent = window.location.href;
+            document.getElementById('userAgent').textContent = navigator.userAgent;
+            document.getElementById('timestamp').textContent = new Date().toLocaleString('ja-JP');
+        </script>
+    </body>
+    </html>

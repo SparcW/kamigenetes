@@ -1,0 +1,447 @@
+# WebアプリケーションNamespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webapp
+---
+# サンプルアプリケーション1: API v1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-v1
+  namespace: webapp
+  labels:
+    app: api-v1
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-v1
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: api-v1
+        version: v1
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-content
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: html-content
+        configMap:
+          name: api-v1-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-v1-content
+  namespace: webapp
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>API v1</title>
+        <style>
+            body { font-family: Arial; text-align: center; margin: 50px; background-color: #e8f4fd; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .version { color: #0066cc; font-size: 24px; font-weight: bold; }
+            .info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 API Service</h1>
+            <div class="version">Version 1.0</div>
+            <div class="info">
+                <h3>API Endpoints</h3>
+                <p><strong>GET /api/v1/health</strong> - Health Check</p>
+                <p><strong>GET /api/v1/users</strong> - User List</p>
+                <p><strong>GET /api/v1/orders</strong> - Order List</p>
+            </div>
+            <div class="info">
+                <h3>Server Info</h3>
+                <p>Hostname: <span id="hostname"></span></p>
+                <p>Timestamp: <span id="timestamp"></span></p>
+            </div>
+        </div>
+        <script>
+            document.getElementById('hostname').textContent = window.location.hostname;
+            document.getElementById('timestamp').textContent = new Date().toISOString();
+        </script>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-v1-service
+  namespace: webapp
+  labels:
+    app: api-v1
+spec:
+  selector:
+    app: api-v1
+    version: v1
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+---
+# サンプルアプリケーション2: API v2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-v2
+  namespace: webapp
+  labels:
+    app: api-v2
+    version: v2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-v2
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: api-v2
+        version: v2
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-content
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: html-content
+        configMap:
+          name: api-v2-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-v2-content
+  namespace: webapp
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>API v2</title>
+        <style>
+            body { font-family: Arial; text-align: center; margin: 50px; background-color: #f0f8e8; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .version { color: #009933; font-size: 24px; font-weight: bold; }
+            .info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .new-feature { background: #e8f8e8; border-left: 4px solid #009933; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 API Service</h1>
+            <div class="version">Version 2.0</div>
+            <div class="info">
+                <h3>API Endpoints</h3>
+                <p><strong>GET /api/v2/health</strong> - Health Check</p>
+                <p><strong>GET /api/v2/users</strong> - User List (Enhanced)</p>
+                <p><strong>GET /api/v2/orders</strong> - Order List (Enhanced)</p>
+                <p><strong>GET /api/v2/analytics</strong> - Analytics (New!)</p>
+            </div>
+            <div class="info new-feature">
+                <h3>New Features in v2</h3>
+                <p>✅ Enhanced performance</p>
+                <p>✅ Additional analytics endpoints</p>
+                <p>✅ Improved error handling</p>
+                <p>✅ GraphQL support</p>
+            </div>
+            <div class="info">
+                <h3>Server Info</h3>
+                <p>Hostname: <span id="hostname"></span></p>
+                <p>Timestamp: <span id="timestamp"></span></p>
+            </div>
+        </div>
+        <script>
+            document.getElementById('hostname').textContent = window.location.hostname;
+            document.getElementById('timestamp').textContent = new Date().toISOString();
+        </script>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-v2-service
+  namespace: webapp
+  labels:
+    app: api-v2
+spec:
+  selector:
+    app: api-v2
+    version: v2
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+---
+# フロントエンドアプリケーション
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: webapp
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-content
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: html-content
+        configMap:
+          name: frontend-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-content
+  namespace: webapp
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Traefik Demo Frontend</title>
+        <style>
+            body { font-family: Arial; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+            .container { max-width: 800px; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 40px; }
+            .card { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin: 20px 0; backdrop-filter: blur(10px); }
+            .api-links { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .api-link { background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-decoration: none; color: white; display: block; }
+            .api-link:hover { background: rgba(255,255,255,0.3); }
+            .feature { margin: 10px 0; }
+            .status { padding: 10px; background: rgba(0,255,0,0.2); border-radius: 5px; margin: 10px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🌟 Traefik Ingress Controller Demo</h1>
+                <p>マルチバージョンAPI & トラフィックルーティングのデモンストレーション</p>
+            </div>
+            
+            <div class="card">
+                <h2>📡 API エンドポイント</h2>
+                <div class="api-links">
+                    <a href="/api/v1" class="api-link">
+                        <h3>API v1.0</h3>
+                        <p>安定版API</p>
+                    </a>
+                    <a href="/api/v2" class="api-link">
+                        <h3>API v2.0</h3>
+                        <p>次世代API</p>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🚀 Traefikの機能デモ</h2>
+                <div class="feature">✅ パスベースルーティング</div>
+                <div class="feature">✅ 動的サービス発見</div>
+                <div class="feature">✅ ロードバランシング</div>
+                <div class="feature">✅ ヘルスチェック</div>
+                <div class="feature">✅ レート制限</div>
+                <div class="feature">✅ リアルタイムダッシュボード</div>
+            </div>
+            
+            <div class="card">
+                <h2>📊 トラフィック情報</h2>
+                <div class="status">
+                    <p><strong>フロントエンド:</strong> <span id="hostname"></span></p>
+                    <p><strong>アクセス時刻:</strong> <span id="timestamp"></span></p>
+                    <p><strong>User-Agent:</strong> <span id="useragent"></span></p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🎯 Traefikダッシュボード</h2>
+                <p>Traefikのリアルタイム監視ダッシュボードにアクセスして、トラフィックの流れを確認できます。</p>
+                <a href="http://traefik.local:8080" class="api-link" target="_blank">
+                    <h3>📈 ダッシュボードを開く</h3>
+                    <p>リアルタイム監視とメトリクス</p>
+                </a>
+            </div>
+        </div>
+        
+        <script>
+            document.getElementById('hostname').textContent = window.location.hostname;
+            document.getElementById('timestamp').textContent = new Date().toLocaleString('ja-JP');
+            document.getElementById('useragent').textContent = navigator.userAgent.substring(0, 50) + '...';
+        </script>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: webapp
+  labels:
+    app: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+---
+# IngressRoute - パスベースルーティング
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: webapp-route
+  namespace: webapp
+spec:
+  entryPoints:
+  - web
+  routes:
+  # API v1 ルーティング
+  - match: Host(`webapp.local`) && PathPrefix(`/api/v1`)
+    kind: Rule
+    services:
+    - name: api-v1-service
+      port: 80
+    middlewares:
+    - name: rate-limit
+      namespace: traefik-system
+    - name: api-v1-headers
+  
+  # API v2 ルーティング  
+  - match: Host(`webapp.local`) && PathPrefix(`/api/v2`)
+    kind: Rule
+    services:
+    - name: api-v2-service
+      port: 80
+    middlewares:
+    - name: rate-limit
+      namespace: traefik-system
+    - name: api-v2-headers
+  
+  # フロントエンド (デフォルトルート)
+  - match: Host(`webapp.local`)
+    kind: Rule
+    services:
+    - name: frontend-service
+      port: 80
+    middlewares:
+    - name: auth-headers
+      namespace: traefik-system
+---
+# Middleware - API v1用ヘッダー
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: api-v1-headers
+  namespace: webapp
+spec:
+  headers:
+    customRequestHeaders:
+      X-API-Version: "v1"
+      X-Service-Name: "api-v1"
+    customResponseHeaders:
+      X-API-Version: "v1"
+      Cache-Control: "max-age=300"
+---
+# Middleware - API v2用ヘッダー
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: api-v2-headers
+  namespace: webapp
+spec:
+  headers:
+    customRequestHeaders:
+      X-API-Version: "v2"
+      X-Service-Name: "api-v2"
+    customResponseHeaders:
+      X-API-Version: "v2"
+      Cache-Control: "max-age=600"
+---
+# IngressRoute - HTTPS版 (Let's Encrypt使用)
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: webapp-route-tls
+  namespace: webapp
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - match: Host(`webapp-secure.local`) && PathPrefix(`/api/v1`)
+    kind: Rule
+    services:
+    - name: api-v1-service
+      port: 80
+  - match: Host(`webapp-secure.local`) && PathPrefix(`/api/v2`)
+    kind: Rule
+    services:
+    - name: api-v2-service
+      port: 80
+  - match: Host(`webapp-secure.local`)
+    kind: Rule
+    services:
+    - name: frontend-service
+      port: 80
+  tls:
+    certResolver: letsencrypt

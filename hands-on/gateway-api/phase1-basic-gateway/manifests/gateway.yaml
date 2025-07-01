@@ -1,0 +1,59 @@
+# Gateway - AWS ECSのApplication Load Balancerに相当
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: demo-gateway
+  namespace: gateway-demo
+  annotations:
+    # AWS ECS比較: ALBの設定に相当
+    description: "Demo Gateway for learning Gateway API"
+spec:
+  # 使用するGatewayClass（ALBの種類に相当）
+  gatewayClassName: nginx-gateway
+  
+  # リスナー設定（ALBのリスナーに相当）
+  listeners:
+  - name: http-listener
+    port: 80
+    protocol: HTTP
+    # allowedRoutes:
+    #   # HTTPRouteのみ許可
+    #   kinds:
+    #   - kind: HTTPRoute
+    #   # 同じ名前空間のRouteのみ許可（セキュリティ）
+    #   namespaces:
+    #     from: Same
+
+---
+# より高度なGateway設定例（コメントアウト）
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: Gateway
+# metadata:
+#   name: advanced-gateway
+#   namespace: gateway-demo
+# spec:
+#   gatewayClassName: nginx-gateway
+#   listeners:
+#   # HTTPリスナー（HTTPSへのリダイレクト用）
+#   - name: http
+#     port: 80
+#     protocol: HTTP
+#   # HTTPSリスナー
+#   - name: https
+#     port: 443
+#     protocol: HTTPS
+#     tls:
+#       mode: Terminate
+#       certificateRefs:
+#       - name: demo-tls-cert
+#         kind: Secret
+#   # 追加のHTTPリスナー（異なるポート）
+#   - name: admin
+#     port: 8080
+#     protocol: HTTP
+#     allowedRoutes:
+#       namespaces:
+#         from: Selector
+#         selector:
+#           matchLabels:
+#             purpose: admin

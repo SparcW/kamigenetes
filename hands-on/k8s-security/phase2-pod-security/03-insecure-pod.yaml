@@ -1,0 +1,247 @@
+# 非セキュアなPod設定例
+# Pod Security Standards違反を確認するためのテスト用マニフェスト
+# これらのPodは意図的にセキュリティポリシー違反を起こします
+---
+# 特権Pod - Restricted Namespaceでエラーになる
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privileged-pod-violation
+  namespace: production  # Restricted レベルのNamespace
+  labels:
+    test-type: security-violation
+    violation: privileged-container
+  annotations:
+    description: "特権コンテナ - Restrictedポリシー違反"
+    expected-result: "Pod作成失敗"
+    aws-ecs-equivalent: "Privileged ECS Task"
+spec:
+  containers:
+  - name: privileged-container
+    image: alpine:3.16
+    command: ["sleep", "3600"]
+    securityContext:
+      privileged: true  # ❌ Restricted レベルで禁止
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "250m"
+
+---
+# Root ユーザー実行Pod - Baseline/Restrictedでエラーになる
+apiVersion: v1
+kind: Pod
+metadata:
+  name: root-user-violation
+  namespace: development  # Baseline レベルのNamespace
+  labels:
+    test-type: security-violation
+    violation: root-user
+  annotations:
+    description: "Rootユーザー実行 - Baselineポリシー違反"
+    expected-result: "Pod作成失敗"
+    aws-ecs-equivalent: "Root user ECS Task"
+spec:
+  containers:
+  - name: root-container
+    image: alpine:3.16
+    command: ["sleep", "3600"]
+    securityContext:
+      runAsUser: 0  # ❌ rootユーザー（UID 0）で実行
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "250m"
+
+---
+# 特権エスカレーション許可Pod - Baseline/Restrictedでエラーになる
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privilege-escalation-violation
+  namespace: staging  # Baseline enforce, Restricted audit
+  labels:
+    test-type: security-violation
+    violation: privilege-escalation
+  annotations:
+    description: "特権エスカレーション許可 - セキュリティポリシー違反"
+    expected-result: "Pod作成失敗"
+    aws-ecs-equivalent: "Privileged escalation ECS Task"
+spec:
+  containers:
+  - name: escalation-container
+    image: alpine:3.16
+    command: ["sleep", "3600"]
+    securityContext:
+      runAsUser: 1000
+      allowPrivilegeEscalation: true  # ❌ 特権エスカレーション許可
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "250m"
+
+---
+# 危険なCapability追加Pod - Restrictedでエラーになる
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dangerous-capability-violation
+  namespace: production  # Restricted レベル
+  labels:
+    test-type: security-violation
+    violation: dangerous-capabilities
+  annotations:
+    description: "危険なCapability - Restrictedポリシー違反"
+    expected-result: "Pod作成失敗"
+    aws-ecs-equivalent: "Privileged capabilities ECS Task"
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  containers:
+  - name: capability-container
+    image: alpine:3.16
+    command: ["sleep", "3600"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        add:
+        - SYS_ADMIN  # ❌ 危険なCapability
+        - NET_ADMIN  # ❌ 危険なCapability
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "250m"
+
+---
+# HostNetwork使用Pod - Baseline/Restrictedでエラーになる
+apiVersion: v1
+kind: Pod
+metadata:
+  name: host-network-violation
+  namespace: development  # Baseline レベル
+  labels:
+    test-type: security-violation
+    violation: host-network
+  annotations:
+    description: "ホストネットワーク使用 - セキュリティポリシー違反"
+    expected-result: "Pod作成失敗"
+    aws-ecs-equivalent: "Host network mode ECS Task"
+spec:
+  hostNetwork: true  # ❌ ホストネットワーク使用
+  containers:
+  - name: host-network-container
+    image: alpine:3.16
+    command: ["sleep", "3600"]
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "250m"
+
+---
+# HostPID使用Pod - Baseline/Restrictedでエラーになる
+apiVersion: v1
+kind: Pod
+metadata:
+  name: host-pid-violation
+  namespace: development  # Baseline レベル
+  labels:
+    test-type: security-violation
+    violation: host-pid
+  annotations:
+    description: "ホストPID使用 - セキュリティポリシー違反"
+    expected-result: "Pod作成失敗"
+    aws-ecs-equivalent: "Host PID mode ECS Task"
+spec:
+  hostPID: true  # ❌ ホストPID使用
+  containers:
+  - name: host-pid-container
+    image: alpine:3.16
+    command: ["sleep", "3600"]
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "250m"
+
+---
+# HostPath ボリューム使用Pod - Baseline/Restrictedでエラーになる
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-volume-violation
+  namespace: staging  # Baseline enforce
+  labels:
+    test-type: security-violation
+    violation: hostpath-volume
+  annotations:
+    description: "HostPathボリューム使用 - セキュリティポリシー違反"
+    expected-result: "Pod作成失敗"
+    aws-ecs-equivalent: "Host volume mount ECS Task"
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  containers:
+  - name: hostpath-container
+    image: alpine:3.16
+    command: ["sleep", "3600"]
+    securityContext:
+      allowPrivilegeEscalation: false
+    volumeMounts:
+    - name: host-volume
+      mountPath: /host
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "250m"
+  volumes:
+  - name: host-volume
+    hostPath:  # ❌ HostPathボリューム使用
+      path: /tmp
+
+---
+# 複数セキュリティ違反Pod - テスト用Namespaceで動作確認
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multiple-violations-test
+  namespace: security-test  # Privileged レベル（テスト用）
+  labels:
+    test-type: security-violation
+    violation: multiple
+  annotations:
+    description: "複数セキュリティ違反 - テスト用（動作する）"
+    expected-result: "Pod作成成功（privileged namespaceのため）"
+    aws-ecs-equivalent: "Legacy insecure ECS Task"
+spec:
+  hostNetwork: true
+  hostPID: true
+  containers:
+  - name: insecure-container
+    image: alpine:3.16
+    command: ["sleep", "3600"]
+    securityContext:
+      privileged: true
+      runAsUser: 0
+      allowPrivilegeEscalation: true
+      capabilities:
+        add:
+        - SYS_ADMIN
+        - NET_ADMIN
+    volumeMounts:
+    - name: host-volume
+      mountPath: /host
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "250m"
+  volumes:
+  - name: host-volume
+    hostPath:
+      path: /tmp

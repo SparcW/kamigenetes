@@ -1,0 +1,54 @@
+# Phase 1: GatewayClass定義
+# インフラストラクチャの設定とGateway Controllerの指定
+
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: nginx-gateway-class
+  labels:
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/component: controller
+spec:
+  # NGINX Gateway Controllerを使用
+  controllerName: k8s.nginx.org/nginx-gateway-controller
+  
+  # 設定パラメータの参照（オプション）
+  parametersRef:
+    group: k8s.nginx.org
+    kind: NginxGateway
+    name: nginx-gateway-config
+    namespace: gateway-api-system
+  
+  # GatewayClassの説明
+  description: "NGINX Gateway Controller for basic HTTP routing"
+
+---
+# NGINX Gateway設定パラメータ（オプション）
+apiVersion: k8s.nginx.org/v1alpha1
+kind: NginxGateway
+metadata:
+  name: nginx-gateway-config
+  namespace: gateway-api-system
+spec:
+  # ロギング設定
+  logging:
+    level: info
+    format: json
+  
+  # 可観測性設定
+  observability:
+    tracing:
+      strategy: disabled  # 基本設定ではトレーシングを無効化
+    
+  # セキュリティ設定
+  security:
+    # TLS設定
+    tls:
+      protocols:
+      - TLSv1.2
+      - TLSv1.3
+      ciphers:
+      - ECDHE-ECDSA-AES128-GCM-SHA256
+      - ECDHE-RSA-AES128-GCM-SHA256
+      - ECDHE-ECDSA-AES256-GCM-SHA384
+      - ECDHE-RSA-AES256-GCM-SHA384

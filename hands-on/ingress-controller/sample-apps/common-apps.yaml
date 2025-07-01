@@ -1,0 +1,653 @@
+# 共通サンプルアプリケーション
+# 全PhaseのIngress Controllerテストで使用可能
+
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webapp
+  labels:
+    name: webapp
+    environment: demo
+---
+# 多目的Webアプリケーション
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-webapp
+  namespace: webapp
+  labels:
+    app: demo-webapp
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: demo-webapp
+  template:
+    metadata:
+      labels:
+        app: demo-webapp
+        tier: frontend
+    spec:
+      containers:
+      - name: webapp
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+          name: http
+        volumeMounts:
+        - name: webapp-content
+          mountPath: /usr/share/nginx/html
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: webapp-content
+        configMap:
+          name: webapp-content
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webapp-content
+  namespace: webapp
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Kubernetes Ingress Controller Demo</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white; 
+                min-height: 100vh; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center;
+            }
+            .container { 
+                max-width: 1000px; 
+                padding: 40px; 
+                background: rgba(255,255,255,0.1); 
+                border-radius: 20px; 
+                backdrop-filter: blur(20px); 
+                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            }
+            .header { text-align: center; margin-bottom: 40px; }
+            .logo { font-size: 64px; margin-bottom: 10px; }
+            .title { font-size: 2.5rem; margin-bottom: 10px; }
+            .subtitle { font-size: 1.2rem; opacity: 0.9; }
+            .grid { 
+                display: grid; 
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+                gap: 30px; 
+                margin: 40px 0; 
+            }
+            .card { 
+                background: rgba(255,255,255,0.15); 
+                padding: 30px; 
+                border-radius: 15px; 
+                backdrop-filter: blur(10px); 
+                border: 1px solid rgba(255,255,255,0.2);
+                transition: transform 0.3s, box-shadow 0.3s;
+            }
+            .card:hover { 
+                transform: translateY(-5px); 
+                box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+            }
+            .card-icon { font-size: 3rem; margin-bottom: 15px; }
+            .card-title { font-size: 1.5rem; margin-bottom: 15px; }
+            .card-description { opacity: 0.9; line-height: 1.6; }
+            .api-grid { 
+                display: grid; 
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+                gap: 15px; 
+                margin: 20px 0; 
+            }
+            .api-link { 
+                display: block; 
+                background: rgba(255,255,255,0.2); 
+                padding: 20px; 
+                border-radius: 10px; 
+                text-decoration: none; 
+                color: white; 
+                text-align: center; 
+                transition: all 0.3s;
+                border: 1px solid rgba(255,255,255,0.3);
+            }
+            .api-link:hover { 
+                background: rgba(255,255,255,0.3); 
+                transform: scale(1.05);
+            }
+            .status-bar { 
+                background: rgba(0,255,0,0.2); 
+                padding: 20px; 
+                border-radius: 10px; 
+                margin: 30px 0; 
+                border-left: 4px solid #00ff00;
+            }
+            .status-item { 
+                display: flex; 
+                justify-content: space-between; 
+                margin: 8px 0; 
+            }
+            .controller-comparison {
+                background: rgba(255,255,255,0.1);
+                padding: 20px;
+                border-radius: 10px;
+                margin: 20px 0;
+            }
+            .comparison-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+            }
+            .comparison-table th,
+            .comparison-table td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid rgba(255,255,255,0.2);
+            }
+            .comparison-table th {
+                background: rgba(255,255,255,0.1);
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">🚀</div>
+                <h1 class="title">Kubernetes Ingress Controller</h1>
+                <p class="subtitle">AWS ECS管理者向け実習デモアプリケーション</p>
+            </div>
+            
+            <div class="grid">
+                <div class="card">
+                    <div class="card-icon">🌐</div>
+                    <h2 class="card-title">API エンドポイント</h2>
+                    <p class="card-description">各バージョンのAPIサービスをテストできます</p>
+                    <div class="api-grid">
+                        <a href="/api/v1" class="api-link">
+                            <strong>API v1.0</strong><br>
+                            基本機能
+                        </a>
+                        <a href="/api/v2" class="api-link">
+                            <strong>API v2.0</strong><br>
+                            拡張機能
+                        </a>
+                        <a href="/health" class="api-link">
+                            <strong>Health</strong><br>
+                            ヘルスチェック
+                        </a>
+                        <a href="/metrics" class="api-link">
+                            <strong>Metrics</strong><br>
+                            メトリクス
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">⚙️</div>
+                    <h2 class="card-title">Ingress Controller機能</h2>
+                    <p class="card-description">このデモで確認できる機能</p>
+                    <ul style="list-style: none; padding: 0; margin-top: 15px;">
+                        <li>✅ パスベースルーティング</li>
+                        <li>✅ ホストベースルーティング</li>
+                        <li>✅ SSL/TLS終端</li>
+                        <li>✅ ロードバランシング</li>
+                        <li>✅ ヘルスチェック</li>
+                        <li>✅ レート制限</li>
+                        <li>✅ 認証・認可</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">📊</div>
+                    <h2 class="card-title">AWS ECS vs Kubernetes</h2>
+                    <p class="card-description">移行における主な違い</p>
+                    <div class="controller-comparison">
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>LB設定</td>
+                                <td>ALB直接</td>
+                                <td>Ingress YAML</td>
+                            </tr>
+                            <tr>
+                                <td>サービス発見</td>
+                                <td>Service Discovery</td>
+                                <td>Service + DNS</td>
+                            </tr>
+                            <tr>
+                                <td>Auto Scaling</td>
+                                <td>ECS Auto Scaling</td>
+                                <td>HPA + CA</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-bar">
+                <h3>📈 システム状態</h3>
+                <div class="status-item">
+                    <span>Hostname:</span>
+                    <span id="hostname">Loading...</span>
+                </div>
+                <div class="status-item">
+                    <span>アクセス時刻:</span>
+                    <span id="timestamp">Loading...</span>
+                </div>
+                <div class="status-item">
+                    <span>User Agent:</span>
+                    <span id="useragent">Loading...</span>
+                </div>
+                <div class="status-item">
+                    <span>Ingress Controller:</span>
+                    <span id="controller">検出中...</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">🎯</div>
+                <h2 class="card-title">テスト手順</h2>
+                <div class="card-description">
+                    <ol style="margin-left: 20px; line-height: 1.8;">
+                        <li>各APIエンドポイントにアクセス</li>
+                        <li>複数回リクエストしてロードバランシング確認</li>
+                        <li>ブラウザ開発者ツールでヘッダー確認</li>
+                        <li>レスポンス時間測定</li>
+                        <li>異なるホスト名でのルーティング確認</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            // ページ情報更新
+            function updatePageInfo() {
+                document.getElementById('hostname').textContent = window.location.hostname;
+                document.getElementById('timestamp').textContent = new Date().toLocaleString('ja-JP');
+                document.getElementById('useragent').textContent = navigator.userAgent.substring(0, 60) + '...';
+                
+                // Ingress Controller検出（ヘッダーから推測）
+                fetch('/', { method: 'HEAD' })
+                    .then(response => {
+                        const server = response.headers.get('Server') || '';
+                        const via = response.headers.get('Via') || '';
+                        
+                        let controller = '不明';
+                        if (server.includes('nginx')) controller = 'NGINX Ingress';
+                        else if (via.includes('traefik')) controller = 'Traefik';
+                        else if (server.includes('aws')) controller = 'AWS Load Balancer';
+                        else if (response.headers.get('x-envoy-upstream-service-time')) controller = 'Istio/Envoy';
+                        
+                        document.getElementById('controller').textContent = controller;
+                    })
+                    .catch(() => {
+                        document.getElementById('controller').textContent = 'ヘッダー取得エラー';
+                    });
+            }
+            
+            // 定期更新
+            updatePageInfo();
+            setInterval(updatePageInfo, 5000);
+        </script>
+    </body>
+    </html>
+  
+  health: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Health Check</title>
+        <style>
+            body { font-family: Arial; text-align: center; padding: 50px; background: #e8f5e8; }
+            .status { font-size: 24px; color: #008000; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <h1>🩺 Health Check</h1>
+        <div class="status">✅ Healthy</div>
+        <p>Timestamp: <span id="timestamp"></span></p>
+        <p>Hostname: <span id="hostname"></span></p>
+        <script>
+            document.getElementById('timestamp').textContent = new Date().toISOString();
+            document.getElementById('hostname').textContent = window.location.hostname;
+        </script>
+    </body>
+    </html>
+  
+  ready: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Readiness Check</title>
+        <style>
+            body { font-family: Arial; text-align: center; padding: 50px; background: #e8f8ff; }
+            .status { font-size: 24px; color: #0066cc; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <h1>🚀 Readiness Check</h1>
+        <div class="status">✅ Ready</div>
+        <p>Pod ready to receive traffic</p>
+        <p>Timestamp: <span id="timestamp"></span></p>
+        <script>
+            document.getElementById('timestamp').textContent = new Date().toISOString();
+        </script>
+    </body>
+    </html>
+  
+  metrics: |
+    # HELP webapp_requests_total Total number of requests
+    # TYPE webapp_requests_total counter
+    webapp_requests_total{method="GET",status="200"} 1234
+    webapp_requests_total{method="POST",status="200"} 567
+    webapp_requests_total{method="GET",status="404"} 89
+    
+    # HELP webapp_request_duration_seconds Request duration
+    # TYPE webapp_request_duration_seconds histogram
+    webapp_request_duration_seconds_bucket{le="0.1"} 100
+    webapp_request_duration_seconds_bucket{le="0.5"} 200
+    webapp_request_duration_seconds_bucket{le="1.0"} 300
+    webapp_request_duration_seconds_bucket{le="+Inf"} 350
+    webapp_request_duration_seconds_sum 87.5
+    webapp_request_duration_seconds_count 350
+    
+    # HELP webapp_current_users Current active users
+    # TYPE webapp_current_users gauge
+    webapp_current_users 42
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: webapp
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+        
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+            try_files $uri $uri/ =404;
+        }
+        
+        location /health {
+            root /usr/share/nginx/html;
+            try_files /health =404;
+        }
+        
+        location /ready {
+            root /usr/share/nginx/html;
+            try_files /ready =404;
+        }
+        
+        location /metrics {
+            root /usr/share/nginx/html;
+            try_files /metrics =404;
+            add_header Content-Type text/plain;
+        }
+        
+        # セキュリティヘッダー
+        add_header X-Frame-Options "SAMEORIGIN";
+        add_header X-Content-Type-Options "nosniff";
+        add_header X-XSS-Protection "1; mode=block";
+        add_header Referrer-Policy "strict-origin-when-cross-origin";
+        
+        # キャッシュ設定
+        location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-webapp-service
+  namespace: webapp
+  labels:
+    app: demo-webapp
+spec:
+  selector:
+    app: demo-webapp
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  type: ClusterIP
+---
+# API Service v1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-service-v1
+  namespace: webapp
+  labels:
+    app: api-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-service
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: api-service
+        version: v1
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: api-content
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: api-content
+        configMap:
+          name: api-v1-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-v1-content
+  namespace: webapp
+data:
+  index.html: |
+    {
+      "service": "API Service",
+      "version": "v1.0",
+      "environment": "Kubernetes",
+      "features": [
+        "User Management",
+        "Authentication",
+        "Basic CRUD Operations"
+      ],
+      "endpoints": {
+        "users": "/api/v1/users",
+        "auth": "/api/v1/auth",
+        "health": "/api/v1/health"
+      },
+      "timestamp": "2024-01-01T00:00:00Z",
+      "pod_info": {
+        "hostname": "api-v1-pod",
+        "version": "1.0.0"
+      },
+      "ingress_test": {
+        "path_routing": true,
+        "load_balancing": true,
+        "health_check": true
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service-v1
+  namespace: webapp
+  labels:
+    app: api-service
+    version: v1
+spec:
+  selector:
+    app: api-service
+    version: v1
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+---
+# API Service v2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-service-v2
+  namespace: webapp
+  labels:
+    app: api-service
+    version: v2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-service
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: api-service
+        version: v2
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: api-content
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: api-content
+        configMap:
+          name: api-v2-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-v2-content
+  namespace: webapp
+data:
+  index.html: |
+    {
+      "service": "API Service",
+      "version": "v2.0",
+      "environment": "Kubernetes",
+      "features": [
+        "Enhanced User Management",
+        "OAuth2 Authentication", 
+        "Advanced CRUD Operations",
+        "Analytics",
+        "GraphQL Support",
+        "Real-time Notifications"
+      ],
+      "endpoints": {
+        "users": "/api/v2/users",
+        "auth": "/api/v2/auth",
+        "orders": "/api/v2/orders",
+        "analytics": "/api/v2/analytics",
+        "graphql": "/api/v2/graphql",
+        "health": "/api/v2/health"
+      },
+      "new_in_v2": [
+        "Performance improvements",
+        "Better error handling",
+        "Enhanced security",
+        "Microservice architecture"
+      ],
+      "timestamp": "2024-01-01T00:00:00Z",
+      "pod_info": {
+        "hostname": "api-v2-pod",
+        "version": "2.0.0"
+      },
+      "ingress_test": {
+        "path_routing": true,
+        "weighted_routing": true,
+        "canary_deployment": true,
+        "load_balancing": true,
+        "health_check": true
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service-v2
+  namespace: webapp
+  labels:
+    app: api-service
+    version: v2
+spec:
+  selector:
+    app: api-service
+    version: v2
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP

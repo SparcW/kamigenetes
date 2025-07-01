@@ -1,0 +1,328 @@
+# NGINX Ingress Controller - パスベース・ホストベースルーティング演習
+
+---
+# API用名前空間
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api
+  labels:
+    name: api
+    ingress-demo: "phase1"
+
+---
+# パスベースルーティング - APIバージョン管理
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-path-routing
+  namespace: api
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # URLパスの書き換え設定
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    # 正規表現による詳細なパス制御
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # API専用のタイムアウト設定
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    # APIレスポンス用ヘッダー追加
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-API-Version: $1";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-Frame-Options: DENY";
+spec:
+  rules:
+  - host: api.local
+    http:
+      paths:
+      # API v1 ルーティング
+      - path: /api/v1(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-v1-service
+            port:
+              number: 80
+      # API v2 ルーティング
+      - path: /api/v2(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-v2-service
+            port:
+              number: 80
+      # 管理用API（制限付き）
+      - path: /api/admin(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: api-admin-service
+            port:
+              number: 80
+
+---
+# ホストベースルーティング - マルチテナント対応
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: multi-tenant-ingress
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # ホスト別の設定分岐
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # 企業A用の特別な設定
+      if ($host = "company-a.local") {
+        set $tenant "company-a";
+        set $rate_limit_key "$tenant-$binary_remote_addr";
+      }
+      
+      # 企業B用の特別な設定
+      if ($host = "company-b.local") {
+        set $tenant "company-b";
+        set $rate_limit_key "$tenant-$binary_remote_addr";
+      }
+      
+      # デフォルト設定
+      if ($tenant = "") {
+        set $tenant "default";
+        set $rate_limit_key "$tenant-$binary_remote_addr";
+      }
+    # テナント識別ヘッダー追加
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Tenant-ID: $tenant";
+spec:
+  rules:
+  # 企業A専用ホスト
+  - host: company-a.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80
+  # 企業B専用ホスト
+  - host: company-b.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80
+  # デフォルトホスト
+  - host: default.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80
+
+---
+# 高度なパスマッチング - ファイル拡張子ベース
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: file-type-routing
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # ファイルタイプ別の処理設定
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # 画像ファイル専用処理
+      location ~* \.(jpg|jpeg|png|gif|webp|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header X-Content-Type "image";
+        try_files $uri @image_service;
+      }
+      
+      # CSS/JSファイル専用処理
+      location ~* \.(css|js)$ {
+        expires 30d;
+        add_header Cache-Control "public";
+        add_header X-Content-Type "static";
+        try_files $uri @static_service;
+      }
+      
+      # APIエンドポイント
+      location @image_service {
+        proxy_pass http://upstream_image_service;
+      }
+      
+      location @static_service {
+        proxy_pass http://upstream_static_service;
+      }
+spec:
+  rules:
+  - host: cdn.local
+    http:
+      paths:
+      # 画像ファイル
+      - path: /.*\.(jpg|jpeg|png|gif|webp|svg)$
+        pathType: Prefix
+        backend:
+          service:
+            name: image-service
+            port:
+              number: 80
+      # 静的ファイル
+      - path: /.*\.(css|js|woff|woff2|ttf)$
+        pathType: Prefix
+        backend:
+          service:
+            name: static-service
+            port:
+              number: 80
+
+---
+# リダイレクトとURL書き換え
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redirect-rewrite-ingress
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # 永続リダイレクト (301)
+    nginx.ingress.kubernetes.io/permanent-redirect: "https://newdomain.com$request_uri"
+    # 一時リダイレクト設定
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # 古いAPIパスから新しいAPIパスへのリダイレクト
+      location /oldapi {
+        return 302 /api/v2$request_uri;
+      }
+      
+      # 言語別リダイレクト
+      location /ja {
+        return 302 /jp$request_uri;
+      }
+      
+      # モバイル用リダイレクト
+      if ($http_user_agent ~* "(Mobile|Android|iPhone|iPad)") {
+        return 302 https://m.example.com$request_uri;
+      }
+spec:
+  rules:
+  - host: old.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80
+
+---
+# 地理的ルーティング（GeoIP）
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: geo-routing-ingress
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # GeoIP設定（要nginx-module-geoip）
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # 国別ルーティング
+      map $geoip_country_code $backend_pool {
+        default "global";
+        JP "japan";
+        US "usa";
+        EU "europe";
+      }
+      
+      # リージョン別ヘッダー追加
+      more_set_headers "X-User-Region: $backend_pool";
+      more_set_headers "X-User-Country: $geoip_country_code";
+    # バックエンドプール選択
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      # 国別バックエンド選択
+      if ($backend_pool = "japan") {
+        set $service_name "webapp-japan-service";
+      }
+      if ($backend_pool = "usa") {
+        set $service_name "webapp-usa-service";
+      }
+      if ($backend_pool = "europe") {
+        set $service_name "webapp-europe-service";
+      }
+      if ($backend_pool = "global") {
+        set $service_name "webapp-service";
+      }
+spec:
+  rules:
+  - host: global.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80
+
+---
+# A/Bテスト用ルーティング
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ab-test-ingress
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # A/Bテスト用設定
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # ユーザーIDベースの分岐（50%ずつ）
+      map $arg_user_id $ab_test_variant {
+        ~*[02468]$ "variant-a";
+        ~*[13579]$ "variant-b";
+        default "variant-a";
+      }
+      
+      # Cookieベースの分岐
+      map $cookie_ab_test $ab_test_from_cookie {
+        "a" "variant-a";
+        "b" "variant-b";
+        default "";
+      }
+      
+      # 最終的なバリアント決定
+      set $final_variant $ab_test_from_cookie;
+      if ($final_variant = "") {
+        set $final_variant $ab_test_variant;
+      }
+    # バリアント情報をヘッダーに追加
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-AB-Test-Variant: $final_variant";
+      
+      # Cookieが設定されていない場合は設定
+      if ($cookie_ab_test = "") {
+        add_header Set-Cookie "ab_test=$final_variant; Path=/; Max-Age=86400; HttpOnly";
+      }
+spec:
+  rules:
+  - host: abtest.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80

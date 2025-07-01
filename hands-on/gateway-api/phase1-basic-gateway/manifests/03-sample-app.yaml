@@ -1,0 +1,337 @@
+# Phase 1: サンプルアプリケーション
+# テスト用のWebアプリケーション
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sample-apps
+  labels:
+    app.kubernetes.io/name: sample-apps
+    gateway.networking.k8s.io/allowed: "true"
+
+---
+# フロントエンドアプリケーション
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-app
+  namespace: sample-apps
+  labels:
+    app: frontend
+    component: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        component: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-content
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: html-content
+        configMap:
+          name: frontend-html
+
+---
+# フロントエンド用HTMLコンテンツ
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-html
+  namespace: sample-apps
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gateway API サンプルアプリ</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #f5f5f5;
+            }
+            .container {
+                background-color: white;
+                padding: 30px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            h1 {
+                color: #2c3e50;
+                text-align: center;
+            }
+            .info-card {
+                background-color: #e8f4f8;
+                padding: 15px;
+                margin: 15px 0;
+                border-left: 4px solid #3498db;
+                border-radius: 5px;
+            }
+            .api-test {
+                background-color: #f0f8e8;
+                padding: 15px;
+                margin: 15px 0;
+                border-left: 4px solid #27ae60;
+                border-radius: 5px;
+            }
+            button {
+                background-color: #3498db;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                margin: 5px;
+            }
+            button:hover {
+                background-color: #2980b9;
+            }
+            .result {
+                margin-top: 10px;
+                padding: 10px;
+                border-radius: 5px;
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎯 Gateway API Phase 1</h1>
+            <h2>基本的なHTTPルーティング</h2>
+            
+            <div class="info-card">
+                <h3>📋 現在の設定</h3>
+                <ul>
+                    <li><strong>GatewayClass</strong>: nginx-gateway-class</li>
+                    <li><strong>Gateway</strong>: basic-gateway</li>
+                    <li><strong>HTTPRoute</strong>: frontend-route, api-route</li>
+                    <li><strong>プロトコル</strong>: HTTP (ポート80), HTTPS (ポート443)</li>
+                </ul>
+            </div>
+            
+            <div class="api-test">
+                <h3>🧪 API テスト</h3>
+                <p>以下のボタンでAPIエンドポイントをテストできます：</p>
+                <button onclick="testAPI('/api/health')">Health Check</button>
+                <button onclick="testAPI('/api/info')">App Info</button>
+                <button onclick="testAPI('/api/version')">Version</button>
+                <div id="apiResult" class="result" style="display:none;"></div>
+            </div>
+            
+            <div class="info-card">
+                <h3>🚀 次のステップ</h3>
+                <p>Phase 1が完了したら、以下を試してみてください：</p>
+                <ul>
+                    <li>Phase 2: 高度なルーティング（トラフィック分割）</li>
+                    <li>Phase 3: マルチプロトコルサポート</li>
+                    <li>Phase 4: AWS統合</li>
+                </ul>
+            </div>
+        </div>
+        
+        <script>
+            async function testAPI(endpoint) {
+                const resultDiv = document.getElementById('apiResult');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = '<p>テスト中...</p>';
+                
+                try {
+                    const response = await fetch(endpoint);
+                    const data = await response.text();
+                    resultDiv.innerHTML = `
+                        <h4>結果: ${endpoint}</h4>
+                        <p><strong>ステータス:</strong> ${response.status}</p>
+                        <p><strong>レスポンス:</strong></p>
+                        <pre>${data}</pre>
+                    `;
+                } catch (error) {
+                    resultDiv.innerHTML = `
+                        <h4>エラー: ${endpoint}</h4>
+                        <p style="color: red;">${error.message}</p>
+                    `;
+                }
+            }
+        </script>
+    </body>
+    </html>
+
+---
+# フロントエンドサービス
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: sample-apps
+  labels:
+    app: frontend
+    component: web
+spec:
+  selector:
+    app: frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# APIアプリケーション
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-app
+  namespace: sample-apps
+  labels:
+    app: api
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+        component: backend
+    spec:
+      containers:
+      - name: api
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: api-config
+          mountPath: /etc/nginx/conf.d
+        - name: api-content
+          mountPath: /usr/share/nginx/html
+        env:
+        - name: API_VERSION
+          value: "v1.0.0"
+        - name: ENVIRONMENT
+          value: "development"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: api-config
+        configMap:
+          name: api-nginx-config
+      - name: api-content
+        configMap:
+          name: api-content
+
+---
+# API用Nginx設定
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-nginx-config
+  namespace: sample-apps
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        
+        # ヘルスチェックエンドポイント
+        location /health {
+            add_header Content-Type application/json;
+            return 200 '{"status":"healthy","timestamp":"$time_iso8601","pod":"$hostname"}';
+        }
+        
+        # アプリケーション情報
+        location /info {
+            add_header Content-Type application/json;
+            return 200 '{"app":"sample-api","version":"$API_VERSION","environment":"$ENVIRONMENT","pod":"$hostname"}';
+        }
+        
+        # バージョン情報
+        location /version {
+            add_header Content-Type application/json;
+            return 200 '{"version":"$API_VERSION","build":"phase1-basic","gateway":"basic-gateway"}';
+        }
+        
+        # 静的コンテンツ
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+            try_files $uri $uri/ =404;
+        }
+        
+        # ログ設定
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
+    }
+
+---
+# API用コンテンツ
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-content
+  namespace: sample-apps
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Sample API</title>
+    </head>
+    <body>
+        <h1>Gateway API Sample API</h1>
+        <p>このAPIは Gateway API Phase 1 のテスト用です。</p>
+        <ul>
+            <li><a href="/health">Health Check</a></li>
+            <li><a href="/info">App Info</a></li>
+            <li><a href="/version">Version</a></li>
+        </ul>
+    </body>
+    </html>
+
+---
+# APIサービス
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: sample-apps
+  labels:
+    app: api
+    component: backend
+spec:
+  selector:
+    app: api
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  type: ClusterIP

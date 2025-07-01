@@ -1,0 +1,264 @@
+# NGINX Ingress Controller - 基本設定演習
+
+---
+# 名前空間
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webapp
+  labels:
+    name: webapp
+    ingress-demo: "phase1"
+
+---
+# 基本的なWebアプリケーション用Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webapp-basic-ingress
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # アクセスログ有効化
+    nginx.ingress.kubernetes.io/enable-access-log: "true"
+    # カスタムエラーページ
+    nginx.ingress.kubernetes.io/custom-http-errors: "404,503"
+    # プロキシバッファサイズ調整
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+    nginx.ingress.kubernetes.io/proxy-buffers-number: "8"
+spec:
+  rules:
+  - host: webapp.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80
+
+---
+# ヘルスチェック用Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: health-check-ingress
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # ヘルスチェックパスの設定
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+      }
+spec:
+  rules:
+  - host: webapp.local
+    http:
+      paths:
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80
+
+---
+# 静的ファイル専用Ingress（キャッシュ設定付き）
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: static-files-ingress
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # 静的ファイルのキャッシュ設定
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header X-Cache-Status "HIT";
+      }
+    # GZIP圧縮有効化
+    nginx.ingress.kubernetes.io/enable-gzip: "true"
+spec:
+  rules:
+  - host: webapp.local
+    http:
+      paths:
+      - path: /static
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80
+
+---
+# WebSocket対応Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: websocket-ingress
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # WebSocket用設定
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "webapp-service"
+    # アップグレードヘッダーの設定
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location /ws {
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+      }
+spec:
+  rules:
+  - host: webapp.local
+    http:
+      paths:
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 80
+
+---
+# CORS対応Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cors-ingress
+  namespace: webapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # CORS設定
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://frontend.example.com,https://admin.example.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET,POST,PUT,DELETE,OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-max-age: "1728000"
+spec:
+  rules:
+  - host: api.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-service
+            port:
+              number: 80
+
+---
+# カスタムエラーページ用ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-error-pages
+  namespace: webapp
+data:
+  404.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>ページが見つかりません - 404</title>
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; }
+            .error-code { font-size: 72px; color: #333; margin-bottom: 20px; }
+            .error-message { font-size: 24px; color: #666; margin-bottom: 30px; }
+            .back-link { color: #007bff; text-decoration: none; }
+        </style>
+    </head>
+    <body>
+        <div class="error-code">404</div>
+        <div class="error-message">お探しのページが見つかりません</div>
+        <a href="/" class="back-link">ホームに戻る</a>
+    </body>
+    </html>
+  
+  503.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>サービス利用不可 - 503</title>
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; }
+            .error-code { font-size: 72px; color: #ff6b6b; margin-bottom: 20px; }
+            .error-message { font-size: 24px; color: #666; margin-bottom: 30px; }
+        </style>
+    </head>
+    <body>
+        <div class="error-code">503</div>
+        <div class="error-message">サービスが一時的に利用できません</div>
+        <div>しばらく時間をおいてからアクセスしてください</div>
+    </body>
+    </html>
+
+---
+# カスタムエラーページ提供用Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom-error-pages
+  namespace: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: custom-error-pages
+  template:
+    metadata:
+      labels:
+        app: custom-error-pages
+    spec:
+      containers:
+      - name: error-pages
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: error-pages
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+      volumes:
+      - name: error-pages
+        configMap:
+          name: custom-error-pages
+
+---
+# カスタムエラーページ用Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: custom-error-pages
+  namespace: webapp
+spec:
+  selector:
+    app: custom-error-pages
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

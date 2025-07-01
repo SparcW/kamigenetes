@@ -1,0 +1,129 @@
+# RoleBinding 定義
+# ServiceAccount と Role を結びつける設定
+---
+# フロントエンドServiceAccount に pod-reader Role を割り当て
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: frontend-pod-reader
+  namespace: security-demo
+  labels:
+    component: rbac
+    tier: frontend
+  annotations:
+    description: "フロントエンドアプリにPod読み取り権限を付与"
+    aws-ecs-equivalent: "ECS Task Definition + Task Role attachment"
+subjects:
+- kind: ServiceAccount
+  name: frontend-sa
+  namespace: security-demo
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# バックエンドServiceAccount に config-reader Role を割り当て
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backend-config-reader
+  namespace: security-demo
+  labels:
+    component: rbac
+    tier: backend
+  annotations:
+    description: "バックエンドAPIに設定読み取り権限を付与"
+    aws-ecs-equivalent: "ECS Task Definition + Task Role attachment"
+subjects:
+- kind: ServiceAccount
+  name: backend-sa
+  namespace: security-demo
+roleRef:
+  kind: Role
+  name: config-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# データベース管理ServiceAccount に namespace-admin Role を割り当て
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: database-admin
+  namespace: security-demo
+  labels:
+    component: rbac
+    tier: database
+  annotations:
+    description: "データベース管理者にNamespace管理権限を付与"
+    aws-ecs-equivalent: "ECS Task Definition + Admin Task Role attachment"
+subjects:
+- kind: ServiceAccount
+  name: database-admin-sa
+  namespace: security-demo
+roleRef:
+  kind: Role
+  name: namespace-admin
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# 制限されたServiceAccount に最小権限Role を割り当て
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: limited-access
+  namespace: security-demo
+  labels:
+    component: rbac
+    tier: test
+  annotations:
+    description: "テスト用アカウントに最小権限を付与"
+    aws-ecs-equivalent: "ECS Task Definition + ReadOnly Task Role attachment"
+subjects:
+- kind: ServiceAccount
+  name: limited-sa
+  namespace: security-demo
+roleRef:
+  kind: Role
+  name: pod-lister
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ClusterRole の例: ノード情報読み取り権限
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-reader
+  labels:
+    component: rbac
+    scope: cluster
+  annotations:
+    description: "ノード情報読み取り用ClusterRole"
+    aws-ecs-equivalent: "EC2 Instance describe permissions"
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes"]
+  verbs: ["get", "list"]
+
+---
+# ClusterRoleBinding の例
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: database-admin-node-reader
+  labels:
+    component: rbac
+    scope: cluster
+  annotations:
+    description: "データベース管理者にノード読み取り権限を付与"
+subjects:
+- kind: ServiceAccount
+  name: database-admin-sa
+  namespace: security-demo
+roleRef:
+  kind: ClusterRole
+  name: node-reader
+  apiGroup: rbac.authorization.k8s.io

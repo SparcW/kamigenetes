@@ -1,0 +1,23 @@
+# NGINX Gateway Fabric GatewayClass
+# AWS ECSのApplication Load Balancerの種類に相当
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: nginx-gateway
+  annotations:
+    # AWS ECS比較: ALBの種類を選択するのと同様
+    description: "NGINX Gateway Fabric - 学習用Gateway実装"
+spec:
+  # GatewayClassを制御するコントローラー名
+  # AWS ECS比較: ALBサービスに相当
+  controllerName: gateway.nginx.org/nginx-gateway-controller
+  description: "NGINX Gateway Fabric for Gateway API learning"
+---
+# Alternative: Istio GatewayClass (コメントアウト)
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: GatewayClass
+# metadata:
+#   name: istio-gateway
+# spec:
+#   controllerName: istio.io/gateway-controller
+#   description: "Istio Gateway for advanced use cases"

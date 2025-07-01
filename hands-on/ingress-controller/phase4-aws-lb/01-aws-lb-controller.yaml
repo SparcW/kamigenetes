@@ -1,0 +1,697 @@
+# AWS Load Balancer Controller セットアップ
+# EKS環境でのApplication Load Balancer統合
+
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webapp
+  labels:
+    name: webapp
+---
+# ServiceAccount for AWS Load Balancer Controller
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: aws-load-balancer-controller
+  name: aws-load-balancer-controller
+  namespace: kube-system
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT-ID:role/AmazonEKSLoadBalancerControllerRole
+---
+# AWS Load Balancer Controller RBAC
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: aws-load-balancer-controller
+  name: aws-load-balancer-controller
+rules:
+- apiGroups: ["", "extensions"]
+  resources: ["configmaps", "endpoints", "events", "ingresses", "ingresses/status", "services", "pods/status"]
+  verbs: ["create", "get", "list", "update", "watch", "patch"]
+- apiGroups: ["", "extensions"]
+  resources: ["nodes", "pods", "secrets", "services", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses/status"]
+  verbs: ["update"]
+- apiGroups: ["elbv2.k8s.aws"]
+  resources: ["targetgroupbindings"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: ["elbv2.k8s.aws"]
+  resources: ["targetgroupbindings/status"]
+  verbs: ["patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: aws-load-balancer-controller
+  name: aws-load-balancer-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: aws-load-balancer-controller
+subjects:
+- kind: ServiceAccount
+  name: aws-load-balancer-controller
+  namespace: kube-system
+---
+# AWS Load Balancer Controller Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: aws-load-balancer-controller
+  name: aws-load-balancer-controller
+  namespace: kube-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/name: aws-load-balancer-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/name: aws-load-balancer-controller
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - aws-load-balancer-controller
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      containers:
+      - args:
+        - --cluster-name=my-cluster
+        - --ingress-class=alb
+        - --aws-vpc-id=vpc-xxxxxxxxx
+        - --aws-region=us-west-2
+        - --feature-gates=TargetGroupBinding=true
+        - --enable-shield=false
+        - --enable-waf=false
+        - --enable-wafv2=false
+        env:
+        - name: AWS_DEFAULT_REGION
+          value: us-west-2
+        image: amazon/aws-load-balancer-controller:v2.7.2
+        livenessProbe:
+          failureThreshold: 2
+          httpGet:
+            path: /healthz
+            port: 61779
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 10
+        name: controller
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 61779
+          name: metrics-server
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 2
+          httpGet:
+            path: /readyz
+            port: 61779
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+        resources:
+          limits:
+            cpu: 200m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 65534
+      serviceAccountName: aws-load-balancer-controller
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: aws-load-balancer-webhook-tls
+---
+# IngressClass for ALB
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: alb
+  labels:
+    app.kubernetes.io/name: aws-load-balancer-controller
+spec:
+  controller: ingress.k8s.aws/alb
+---
+# サンプルアプリケーション: Web Frontend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-frontend
+  namespace: webapp
+  labels:
+    app: webapp-frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: webapp-frontend
+  template:
+    metadata:
+      labels:
+        app: webapp-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: frontend-content
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: frontend-content
+        configMap:
+          name: frontend-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-content
+  namespace: webapp
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>AWS EKS + ALB Demo</title>
+        <style>
+            body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                margin: 0; 
+                padding: 20px; 
+                background: linear-gradient(135deg, #FF9500 0%, #FF6B35 100%); 
+                color: white; 
+                min-height: 100vh;
+            }
+            .container { 
+                max-width: 900px; 
+                margin: 0 auto; 
+                background: rgba(255,255,255,0.1); 
+                padding: 40px; 
+                border-radius: 15px; 
+                backdrop-filter: blur(10px);
+            }
+            .header { text-align: center; margin-bottom: 40px; }
+            .logo { font-size: 48px; margin-bottom: 10px; }
+            .card { 
+                background: rgba(255,255,255,0.2); 
+                padding: 25px; 
+                border-radius: 10px; 
+                margin: 20px 0; 
+                backdrop-filter: blur(5px);
+            }
+            .feature-grid { 
+                display: grid; 
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+                gap: 20px; 
+                margin: 30px 0; 
+            }
+            .feature { 
+                background: rgba(255,255,255,0.15); 
+                padding: 20px; 
+                border-radius: 8px; 
+                text-align: center;
+            }
+            .api-section { margin: 30px 0; }
+            .api-button { 
+                display: inline-block; 
+                background: rgba(255,255,255,0.3); 
+                padding: 12px 24px; 
+                border-radius: 25px; 
+                text-decoration: none; 
+                color: white; 
+                margin: 10px; 
+                transition: all 0.3s;
+            }
+            .api-button:hover { 
+                background: rgba(255,255,255,0.5); 
+                transform: translateY(-2px);
+            }
+            .status { 
+                background: rgba(0,255,0,0.2); 
+                padding: 15px; 
+                border-radius: 8px; 
+                margin: 20px 0;
+            }
+            .aws-services {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin: 20px 0;
+            }
+            .aws-service {
+                background: rgba(255,255,255,0.15);
+                padding: 15px;
+                border-radius: 8px;
+                text-align: center;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">🚀</div>
+                <h1>AWS EKS + Application Load Balancer</h1>
+                <p>AWS Load Balancer Controller デモンストレーション</p>
+            </div>
+            
+            <div class="card">
+                <h2>🌟 AWS EKS統合の特徴</h2>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h3>🔄 ALB統合</h3>
+                        <p>AWS Application Load Balancer完全統合</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🔐 ACM統合</h3>
+                        <p>AWS Certificate Manager自動連携</p>
+                    </div>
+                    <div class="feature">
+                        <h3>📊 CloudWatch</h3>
+                        <p>ネイティブメトリクス・ログ統合</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🛡️ AWS WAF</h3>
+                        <p>Web Application Firewall統合</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🔗 API エンドポイント</h2>
+                <div class="api-section">
+                    <a href="/api/v1" class="api-button">API v1.0 - ユーザー管理</a>
+                    <a href="/api/v2" class="api-button">API v2.0 - 注文管理</a>
+                    <a href="/health" class="api-button">ヘルスチェック</a>
+                    <a href="/metrics" class="api-button">メトリクス</a>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>☁️ AWS サービス統合</h2>
+                <div class="aws-services">
+                    <div class="aws-service">
+                        <strong>Application Load Balancer</strong><br>
+                        L7ロードバランシング
+                    </div>
+                    <div class="aws-service">
+                        <strong>Route 53</strong><br>
+                        DNS管理・ヘルスチェック
+                    </div>
+                    <div class="aws-service">
+                        <strong>Certificate Manager</strong><br>
+                        SSL/TLS証明書管理
+                    </div>
+                    <div class="aws-service">
+                        <strong>CloudWatch</strong><br>
+                        監視・ログ・アラート
+                    </div>
+                    <div class="aws-service">
+                        <strong>VPC</strong><br>
+                        ネットワーク分離
+                    </div>
+                    <div class="aws-service">
+                        <strong>IAM</strong><br>
+                        アクセス制御
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📈 ECS vs EKS 移行メリット</h2>
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h3>🔄 ポータビリティ</h3>
+                        <p>マルチクラウド対応</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🛠️ 豊富なエコシステム</h3>
+                        <p>Kubernetesコミュニティ活用</p>
+                    </div>
+                    <div class="feature">
+                        <h3>⚙️ 高い拡張性</h3>
+                        <p>カスタムコントローラー</p>
+                    </div>
+                    <div class="feature">
+                        <h3>📊 標準化</h3>
+                        <p>業界標準ツール使用可能</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status">
+                <h3>📊 システム情報</h3>
+                <p><strong>ホスト名:</strong> <span id="hostname"></span></p>
+                <p><strong>アクセス時刻:</strong> <span id="timestamp"></span></p>
+                <p><strong>Load Balancer:</strong> AWS Application Load Balancer</p>
+                <p><strong>Kubernetes Service:</strong> webapp-frontend-service</p>
+                <p><strong>AWS Region:</strong> <span id="region">us-west-2</span></p>
+            </div>
+        </div>
+        
+        <script>
+            document.getElementById('hostname').textContent = window.location.hostname;
+            document.getElementById('timestamp').textContent = new Date().toLocaleString('ja-JP');
+            
+            // 簡単なヘルスチェック表示
+            setInterval(() => {
+                document.getElementById('timestamp').textContent = new Date().toLocaleString('ja-JP');
+            }, 1000);
+        </script>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-frontend-service
+  namespace: webapp
+  labels:
+    app: webapp-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: webapp-frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+---
+# サンプルアプリケーション: API Backend v1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-backend-v1
+  namespace: webapp
+  labels:
+    app: api-backend
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-backend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: api-backend
+        version: v1
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: api-content
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: api-content
+        configMap:
+          name: api-v1-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-v1-content
+  namespace: webapp
+data:
+  index.html: |
+    {
+      "service": "API Backend",
+      "version": "v1.0",
+      "environment": "AWS EKS",
+      "load_balancer": "Application Load Balancer",
+      "features": [
+        "User Management",
+        "Authentication",
+        "Data Processing"
+      ],
+      "endpoints": {
+        "users": "/api/v1/users",
+        "auth": "/api/v1/auth",
+        "health": "/api/v1/health"
+      },
+      "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+      "pod_info": {
+        "hostname": "$(hostname)",
+        "pod_ip": "$(hostname -i)"
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-backend-v1-service
+  namespace: webapp
+  labels:
+    app: api-backend
+    version: v1
+spec:
+  type: ClusterIP
+  selector:
+    app: api-backend
+    version: v1
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+---
+# サンプルアプリケーション: API Backend v2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-backend-v2
+  namespace: webapp
+  labels:
+    app: api-backend
+    version: v2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-backend
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: api-backend
+        version: v2
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: api-content
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: api-content
+        configMap:
+          name: api-v2-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-v2-content
+  namespace: webapp
+data:
+  index.html: |
+    {
+      "service": "API Backend",
+      "version": "v2.0",
+      "environment": "AWS EKS",
+      "load_balancer": "Application Load Balancer",
+      "features": [
+        "Enhanced User Management",
+        "OAuth2 Authentication",
+        "Advanced Data Processing",
+        "Analytics",
+        "GraphQL Support"
+      ],
+      "endpoints": {
+        "users": "/api/v2/users",
+        "auth": "/api/v2/auth",
+        "orders": "/api/v2/orders",
+        "analytics": "/api/v2/analytics",
+        "health": "/api/v2/health",
+        "graphql": "/api/v2/graphql"
+      },
+      "new_features": [
+        "Real-time notifications",
+        "Advanced caching",
+        "Machine learning integration",
+        "Multi-tenant support"
+      ],
+      "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+      "pod_info": {
+        "hostname": "$(hostname)",
+        "pod_ip": "$(hostname -i)"
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-backend-v2-service
+  namespace: webapp
+  labels:
+    app: api-backend
+    version: v2
+spec:
+  type: ClusterIP
+  selector:
+    app: api-backend
+    version: v2
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+---
+# HorizontalPodAutoscaler - フロントエンド
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: webapp-frontend-hpa
+  namespace: webapp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: webapp-frontend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+---
+# HorizontalPodAutoscaler - API Backend
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-backend-hpa
+  namespace: webapp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-backend-v1
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70

@@ -1,0 +1,71 @@
+# HTTPRoute - AWS ECSのALBリスナールールとターゲットグループに相当
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: demo-route
+  namespace: gateway-demo
+  annotations:
+    # AWS ECS比較: ALBリスナールールの設定に相当
+    description: "Basic HTTP routing to demo application"
+spec:
+  # 親Gateway（ALBに相当）への参照
+  parentRefs:
+  - name: demo-gateway
+    namespace: gateway-demo
+    sectionName: http-listener  # 特定のリスナーを指定
+  
+  # ホスト名（ALBのHost headerルールに相当）
+  hostnames:
+  - "demo.example.com"
+  - "gateway-demo.local"  # ローカルテスト用
+  
+  # ルーティングルール（ALBのパスベースルールに相当）
+  rules:
+  # ルール1: ルートパスへのアクセス
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/"
+    # バックエンドサービス（ALBターゲットグループに相当）
+    backendRefs:
+    - name: demo-service
+      port: 80
+      weight: 100  # トラフィックの重み（100%）
+
+---
+# より複雑なHTTPRoute例（コメントアウト）
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: HTTPRoute
+# metadata:
+#   name: advanced-route
+#   namespace: gateway-demo
+# spec:
+#   parentRefs:
+#   - name: demo-gateway
+#   hostnames:
+#   - "api.example.com"
+#   rules:
+#   # APIパスのルーティング
+#   - matches:
+#     - path:
+#         type: PathPrefix
+#         value: "/api/v1"
+#     backendRefs:
+#     - name: api-v1-service
+#       port: 80
+#   # 静的ファイルのルーティング
+#   - matches:
+#     - path:
+#         type: PathPrefix
+#         value: "/static"
+#     backendRefs:
+#     - name: static-files-service
+#       port: 80
+#   # ヘルスチェック
+#   - matches:
+#     - path:
+#         type: Exact
+#         value: "/health"
+#     backendRefs:
+#     - name: health-service
+#       port: 8080

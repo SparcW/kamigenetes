@@ -1,0 +1,142 @@
+# API v2 Application - 新しいAPI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-v2
+  namespace: gateway-advanced
+  labels:
+    app: api-v2
+    version: v2.0.0
+    tier: backend
+    api-version: v2
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-v2
+  template:
+    metadata:
+      labels:
+        app: api-v2
+        version: v2.0.0
+        tier: backend
+        api-version: v2
+    spec:
+      containers:
+      - name: api-server
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+          name: http
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "200m"
+          limits:
+            memory: "256Mi"
+            cpu: "400m"
+        volumeMounts:
+        - name: api-content
+          mountPath: /usr/share/nginx/html
+          readOnly: true
+        env:
+        - name: API_VERSION
+          value: "v2"
+        - name: SERVICE_NAME
+          value: "api-v2"
+        - name: FEATURES
+          value: "advanced,caching,validation"
+      volumes:
+      - name: api-content
+        configMap:
+          name: api-v2-content
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-v2-service
+  namespace: gateway-advanced
+  labels:
+    app: api-v2
+    api-version: v2
+spec:
+  selector:
+    app: api-v2
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-v2-content
+  namespace: gateway-advanced
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>API v2</title>
+        <style>
+            body { font-family: Arial; margin: 40px; background: #f0fff0; }
+            .header { background: #2e7d32; color: white; padding: 20px; border-radius: 8px; }
+            .content { background: white; padding: 20px; margin-top: 20px; border-radius: 8px; }
+            .version { color: #2e7d32; font-weight: bold; }
+            .new-feature { background: #e8f5e8; padding: 10px; border-left: 4px solid #2e7d32; margin: 10px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🚀 API v2 Service</h1>
+            <p>Next Generation API - 高性能版</p>
+        </div>
+        <div class="content">
+            <h2>API Information</h2>
+            <p><strong>Version:</strong> <span class="version">v2.0.0</span></p>
+            <p><strong>Status:</strong> Production Ready</p>
+            <p><strong>Description:</strong> 次世代APIサービス（高機能版）</p>
+            
+            <div class="new-feature">
+                <h3>🆕 New Features in v2</h3>
+                <ul>
+                    <li>高度なバリデーション</li>
+                    <li>キャッシュ機能</li>
+                    <li>レート制限</li>
+                    <li>詳細なエラーハンドリング</li>
+                    <li>GraphQL対応</li>
+                </ul>
+            </div>
+            
+            <h3>Performance Improvements</h3>
+            <ul>
+                <li>50%高速なレスポンス時間</li>
+                <li>90%削減されたメモリ使用量</li>
+                <li>自動スケーリング対応</li>
+            </ul>
+            
+            <h3>AWS ECS比較</h3>
+            <p>このサービスは、AWS ECSの新しいタスク定義リビジョンに相当します。</p>
+        </div>
+        <script>
+            document.body.innerHTML += '<p>Request ID: ' + Math.random().toString(36).substr(2, 9) + '</p>';
+            document.body.innerHTML += '<p>Timestamp: ' + new Date().toISOString() + '</p>';
+        </script>
+    </body>
+    </html>
+  
+  health: |
+    {
+      "status": "healthy",
+      "version": "v2.0.0",
+      "service": "api-v2",
+      "features": ["validation", "caching", "rate-limiting"],
+      "performance": {
+        "response_time_ms": 50,
+        "memory_usage_mb": 128
+      },
+      "timestamp": "2025-07-01T00:00:00Z"
+    }

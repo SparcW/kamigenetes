@@ -1,0 +1,133 @@
+# トラフィック分割ルーティング - AWS ALBの重み付きターゲットグループに相当
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: traffic-split-route
+  namespace: gateway-advanced
+  annotations:
+    description: "トラフィック分割 - AWS ALBの重み付きターゲットグループに相当"
+spec:
+  parentRefs:
+  - name: demo-gateway
+    namespace: gateway-demo
+  
+  hostnames:
+  - "canary.example.com"
+  - "traffic-split.local"
+  
+  rules:
+  # API Canaryデプロイメント（90% stable, 10% canary）
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/api"
+    backendRefs:
+    - name: api-stable-service
+      port: 80
+      weight: 90  # 90%のトラフィック
+    - name: api-canary-service
+      port: 80
+      weight: 10  # 10%のトラフィック
+  
+  # フロントエンドBlue-Greenデプロイメント（段階的移行）
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/app"
+    backendRefs:
+    - name: frontend-blue-service
+      port: 80
+      weight: 70  # Blue環境（既存）
+    - name: frontend-green-service
+      port: 80
+      weight: 30  # Green環境（新バージョン）
+  
+  # A/Bテスト用分割
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/experiment"
+    backendRefs:
+    - name: experiment-a-service
+      port: 80
+      weight: 50  # バリアントA
+    - name: experiment-b-service
+      port: 80
+      weight: 50  # バリアントB
+
+---
+# 高度なCanaryデプロイメント（条件付き分割）
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: conditional-canary-route
+  namespace: gateway-advanced
+  annotations:
+    description: "条件付きCanary - 特定条件でのみCanaryにルーティング"
+spec:
+  parentRefs:
+  - name: demo-gateway
+    namespace: gateway-demo
+  
+  hostnames:
+  - "conditional-canary.example.com"
+  
+  rules:
+  # 内部ユーザー向けCanary（ヘッダーベース）
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/api"
+      headers:
+      - name: "x-user-type"
+        value: "internal"
+    backendRefs:
+    - name: api-canary-service  # 内部ユーザーは100% Canary
+      port: 80
+      weight: 100
+  
+  # 特定地域のユーザー向けCanary
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/api"
+      headers:
+      - name: "x-user-region"
+        value: "us-west"
+    backendRefs:
+    - name: api-stable-service
+      port: 80
+      weight: 80
+    - name: api-canary-service
+      port: 80
+      weight: 20  # US-West地域では20% Canary
+  
+  # デフォルト（一般ユーザー）
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/api"
+    backendRefs:
+    - name: api-stable-service
+      port: 80
+      weight: 95
+    - name: api-canary-service
+      port: 80
+      weight: 5   # 一般ユーザーは5% Canary
+
+---
+# クロス名前空間アクセス用のReferenceGrant
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: gateway-to-canary
+  namespace: gateway-canary
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: gateway-advanced
+  to:
+  - group: ""
+    kind: Service
+    name: api-canary-service

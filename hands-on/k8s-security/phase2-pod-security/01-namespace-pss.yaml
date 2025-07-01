@@ -1,0 +1,82 @@
+# Pod Security Standards設定
+# Namespaceレベルでのセキュリティポリシー適用
+---
+# 開発環境Namespace - Baseline レベル
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development
+  labels:
+    environment: dev
+    # Pod Security Standards設定
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    description: "開発環境 - Baselineレベルのセキュリティ"
+    aws-ecs-equivalent: "Development ECS Cluster"
+
+---
+# ステージング環境Namespace - Restricted レベル（警告のみ）
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+  labels:
+    environment: staging
+    # 段階的適用: まず警告とログのみ
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    description: "ステージング環境 - Restrictedレベル準備中"
+    aws-ecs-equivalent: "Staging ECS Cluster"
+
+---
+# 本番環境Namespace - Restricted レベル（完全適用）
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    environment: prod
+    # 最高レベルのセキュリティ
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    description: "本番環境 - 最高レベルのセキュリティ"
+    aws-ecs-equivalent: "Production ECS Cluster"
+
+---
+# セキュリティテスト用Namespace - 各レベルテスト用
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security-test
+  labels:
+    purpose: security-testing
+    # テスト用に柔軟な設定
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: baseline
+  annotations:
+    description: "セキュリティテスト用 - 各レベルの動作確認"
+    
+---
+# 金融アプリ用Namespace - 最厳格レベル
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: financial-app
+  labels:
+    app-type: financial
+    security-level: maximum
+    # 金融業界要件に対応
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    description: "金融アプリケーション - 最厳格セキュリティ"
+    compliance: "PCI-DSS, SOX"
+    aws-ecs-equivalent: "High-Security ECS Cluster"

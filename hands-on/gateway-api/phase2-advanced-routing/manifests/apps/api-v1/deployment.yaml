@@ -1,0 +1,120 @@
+# API v1 Application - レガシーAPI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-v1
+  namespace: gateway-advanced
+  labels:
+    app: api-v1
+    version: v1.0.0
+    tier: backend
+    api-version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-v1
+  template:
+    metadata:
+      labels:
+        app: api-v1
+        version: v1.0.0
+        tier: backend
+        api-version: v1
+    spec:
+      containers:
+      - name: api-server
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+          name: http
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: api-content
+          mountPath: /usr/share/nginx/html
+          readOnly: true
+        env:
+        - name: API_VERSION
+          value: "v1"
+        - name: SERVICE_NAME
+          value: "api-v1"
+      volumes:
+      - name: api-content
+        configMap:
+          name: api-v1-content
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-v1-service
+  namespace: gateway-advanced
+  labels:
+    app: api-v1
+    api-version: v1
+spec:
+  selector:
+    app: api-v1
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-v1-content
+  namespace: gateway-advanced
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>API v1</title>
+        <style>
+            body { font-family: Arial; margin: 40px; background: #f0f8ff; }
+            .header { background: #1e88e5; color: white; padding: 20px; border-radius: 8px; }
+            .content { background: white; padding: 20px; margin-top: 20px; border-radius: 8px; }
+            .version { color: #1e88e5; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🔧 API v1 Service</h1>
+            <p>Legacy API - 安定版</p>
+        </div>
+        <div class="content">
+            <h2>API Information</h2>
+            <p><strong>Version:</strong> <span class="version">v1.0.0</span></p>
+            <p><strong>Status:</strong> Production Ready</p>
+            <p><strong>Description:</strong> レガシーAPIサービス（安定版）</p>
+            <p><strong>Features:</strong></p>
+            <ul>
+                <li>基本的なCRUD操作</li>
+                <li>シンプルなJSONレスポンス</li>
+                <li>高い安定性</li>
+            </ul>
+            <h3>AWS ECS比較</h3>
+            <p>このサービスは、AWS ECSのタスクとターゲットグループに相当します。</p>
+        </div>
+        <script>
+            document.body.innerHTML += '<p>Timestamp: ' + new Date().toISOString() + '</p>';
+        </script>
+    </body>
+    </html>
+  
+  health: |
+    {
+      "status": "healthy",
+      "version": "v1.0.0",
+      "service": "api-v1",
+      "timestamp": "2025-07-01T00:00:00Z"
+    }

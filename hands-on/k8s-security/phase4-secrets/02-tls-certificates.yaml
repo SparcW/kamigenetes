@@ -1,0 +1,198 @@
+# TLS証明書管理演習
+# このファイルでは、TLS証明書をKubernetes Secretsとして管理し、
+# Podで利用する方法を学習します。
+
+---
+# 自己署名証明書を作成するJob
+# 実際の環境では、Let's EncryptやCA証明書を使用することを推奨
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cert-generator
+  namespace: k8s-security-demo
+  labels:
+    app: cert-generator
+spec:
+  template:
+    spec:
+      containers:
+      - name: cert-generator
+        image: alpine/openssl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # 秘密鍵の生成
+          openssl genrsa -out /tmp/server.key 2048
+          
+          # 証明書署名要求（CSR）の生成
+          openssl req -new -key /tmp/server.key -out /tmp/server.csr -subj "/CN=sample-app.k8s-security-demo.svc.cluster.local"
+          
+          # 自己署名証明書の生成
+          openssl x509 -req -days 365 -in /tmp/server.csr -signkey /tmp/server.key -out /tmp/server.crt
+          
+          # Secretの作成（kubectl createを使用）
+          kubectl create secret tls sample-app-tls \
+            --cert=/tmp/server.crt \
+            --key=/tmp/server.key \
+            --namespace=k8s-security-demo \
+            --dry-run=client -o yaml > /tmp/tls-secret.yaml
+          
+          # 作成したSecretをクラスターに適用
+          kubectl apply -f /tmp/tls-secret.yaml
+          
+          echo "TLS証明書のSecretが正常に作成されました"
+        volumeMounts:
+        - name: kubectl-config
+          mountPath: /.kube
+        env:
+        - name: KUBECONFIG
+          value: /.kube/config
+      volumes:
+      - name: kubectl-config
+        hostPath:
+          path: /home/docker/.kube
+          type: Directory
+      restartPolicy: OnFailure
+      serviceAccountName: secrets-demo-sa
+
+---
+# TLS証明書を使用するNginx Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-with-tls
+  namespace: k8s-security-demo
+  labels:
+    app: nginx-tls
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.21-alpine
+    ports:
+    - containerPort: 443
+      name: https
+    - containerPort: 80
+      name: http
+    volumeMounts:
+    - name: tls-certs
+      mountPath: /etc/nginx/ssl
+      readOnly: true
+    - name: nginx-config
+      mountPath: /etc/nginx/nginx.conf
+      subPath: nginx.conf
+      readOnly: true
+  volumes:
+  - name: tls-certs
+    secret:
+      secretName: sample-app-tls
+      items:
+      - key: tls.crt
+        path: server.crt
+      - key: tls.key
+        path: server.key
+  - name: nginx-config
+    configMap:
+      name: nginx-tls-config
+
+---
+# Nginx用設定ファイル（HTTPS対応）
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-tls-config
+  namespace: k8s-security-demo
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        # HTTPサーバー（HTTPSへのリダイレクト）
+        server {
+            listen 80;
+            server_name sample-app.k8s-security-demo.svc.cluster.local;
+            
+            location / {
+                return 301 https://$server_name$request_uri;
+            }
+        }
+        
+        # HTTPSサーバー
+        server {
+            listen 443 ssl;
+            server_name sample-app.k8s-security-demo.svc.cluster.local;
+            
+            # TLS証明書の設定
+            ssl_certificate /etc/nginx/ssl/server.crt;
+            ssl_certificate_key /etc/nginx/ssl/server.key;
+            
+            # SSL設定
+            ssl_protocols TLSv1.2 TLSv1.3;
+            ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
+            ssl_prefer_server_ciphers off;
+            
+            location / {
+                root /usr/share/nginx/html;
+                index index.html;
+            }
+        }
+    }
+
+---
+# TLS対応Nginxサービス
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-tls-service
+  namespace: k8s-security-demo
+spec:
+  selector:
+    app: nginx-tls
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  - name: https
+    port: 443
+    targetPort: 443
+  type: ClusterIP
+
+---
+# 証明書の検証を行うテスト用Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tls-test-client
+  namespace: k8s-security-demo
+  labels:
+    app: tls-test
+spec:
+  containers:
+  - name: curl
+    image: curlimages/curl:latest
+    command:
+    - /bin/sh
+    - -c
+    - |
+      echo "=== TLS証明書の検証テスト ==="
+      
+      # HTTP接続テスト（HTTPSにリダイレクトされる）
+      echo "1. HTTP接続テスト..."
+      curl -v http://nginx-tls-service.k8s-security-demo.svc.cluster.local/ || echo "期待通りHTTPSにリダイレクトされました"
+      
+      # HTTPS接続テスト（証明書検証なし）
+      echo "2. HTTPS接続テスト（証明書検証なし）..."
+      curl -k -v https://nginx-tls-service.k8s-security-demo.svc.cluster.local/
+      
+      # 証明書情報の表示
+      echo "3. 証明書情報の確認..."
+      echo | openssl s_client -connect nginx-tls-service.k8s-security-demo.svc.cluster.local:443 -servername nginx-tls-service.k8s-security-demo.svc.cluster.local 2>/dev/null | openssl x509 -text -noout
+      
+      # 無限ループでPodを維持
+      while true; do sleep 3600; done
+  restartPolicy: Always

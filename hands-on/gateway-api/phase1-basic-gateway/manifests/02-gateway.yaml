@@ -1,0 +1,73 @@
+# Gateway API Systemネームスペース
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-api-system
+  labels:
+    app.kubernetes.io/name: gateway-api-system
+    app.kubernetes.io/component: system
+
+---
+# Phase 1: Gateway定義
+# ネットワーク入り口の設定
+
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: basic-gateway
+  namespace: gateway-api-system
+  labels:
+    app.kubernetes.io/name: basic-gateway
+    app.kubernetes.io/component: gateway
+spec:
+  # 使用するGatewayClass
+  gatewayClassName: nginx-gateway-class
+  
+  # リスナー設定
+  listeners:
+  # HTTPリスナー（ポート80）
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      # すべての名前空間からのRouteを許可
+      namespaces:
+        from: All
+      # HTTPRouteのみ許可
+      kinds:
+      - kind: HTTPRoute
+        group: gateway.networking.k8s.io
+  
+  # HTTPSリスナー（ポート443）- 開発用証明書
+  - name: https
+    port: 443
+    protocol: HTTPS
+    hostname: "*.local"  # 開発環境用
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: basic-gateway-tls
+        namespace: gateway-api-system
+    allowedRoutes:
+      namespaces:
+        from: All
+      kinds:
+      - kind: HTTPRoute
+        group: gateway.networking.k8s.io
+
+---
+# 開発用自己署名証明書
+apiVersion: v1
+kind: Secret
+metadata:
+  name: basic-gateway-tls
+  namespace: gateway-api-system
+  labels:
+    app.kubernetes.io/name: basic-gateway-tls
+    app.kubernetes.io/component: certificate
+type: kubernetes.io/tls
+data:
+  # 自己署名証明書（*.localドメイン用）
+  # 本番環境では cert-manager を使用してください
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURUekNDQWplZ0F3SUJBZ0lVUHdCeDFGSWNEOStWcmdUZmIvN1l5cStlMHJnd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0pqRWtNQ0lHQTFVRUF3d2JLATE0QzNSc01qTmNZaTVzWHpGRFEzUjBZUzVzYjJOaGJHRjNWMEl3SGhjTgpNakV4TWpNd01UQXdNVEF3V2hjTk1qRXhNak13TVRBd01URXdXakFtTVNRd0lnWURWUVFEREJzb0ZUZ0xkR3d5Ck00d1lXNWNZUzVzY0VORGRHRjViRzlqWVd4aGQxZENNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QQpNSUlCQ2dLQ0FRRUF5Qk9sRXhON1o5TEllbFVHOFU3ajJJT1dBL3g3UGwxYUZKVlNsWWMrUzMraGJ2RkQwenprCmRkcFdNRDJLRW44SUdVdkR5VTNYb3ljaUJ2ZkZ6TlJYY1V4TjR4UEt3VWdTNmNzWTRrNWRsNUNzS0RJblBmTmEKR3VlNXFmUGlHL3BrTG5saTUzRlM2a09DQ05JYzZEdkJCTGEvcGE4cWFxUTlMU2RJUEtJY3RPMGpvdjRjc2w4NQpLTjZubDNlakR2djhFNHBQdWZrSkZhQU84bjNYVi9zWlMxTDVmUGd4SmlJMzN3OE1jWUs3RXhFZnFhOFJJOE1PCjd5cUhwUTZ5Y2N1ZnNmTFRNZTYya1A4WkJ3TGRzeFo1Nm92ZVMyM0JueUpFa1VhMUNQc3VPZEVzY0wySmx2ZkMKVmR2S2VUaVdnSzBSaWRpc0VRU2ZYS0t1ckhKMjFRSURBUUFCbzFNd1VUQWRCZ05WSFE0RUZnUVVmNHl5a1BZNAo5bXh3VVZWa04zSjNZbGh4aFFRd0h3WURWUjBqQkJnd0ZvQVVmNHl5a1BZNDlteHdVVlZrTjNKM1lsaHhoUVF3CkR3WURWUjBUQVFIL0JBVXdBd0VCL3pBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWtaODduOC9rT1l2Mnh1TzYKUjcrZjZuOGx4azRrNk1MbXZCMVFJUE9nOWtrK0xjSk95OGNnMmR2czFTdjVPWFFqdjJPM29CZHdRenQ2djdRZwpJRlNabkJyemIrM2FmOThWVnh6VGY1aWM1T2tKOUtvUVlwMzEyM3VIYzNzd2xWMXVKQkVreEF6UnVabUJCNEVUCjBCcVNsMHVhODJVVHFJYUxUbGl4dE5pRGEyaHJVc3dxYkpDZlVQK2ZaazByZ0JMVUdCNEtGUTVORlJHVUczZC8KYTN6d2ZEWTBvQXFxZnVRVmFPMUNQaURiZ0NNV0pVNjNQclJTYnZidGJpUlFoZzE1RXhxSDUyb1JoWnJrVUFEOAphaWM4Qkw1ZGYrUnlqT3hQcWJQTkhQSW1KV3pPQnU2bkx2Y3h3cDQ5ZklKc1NrdGZoMWdITy9Td3pRODNkMEEzCnZRPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRRElFNlVURTN0bjBzaG4KVlFieFR1UFlnNVlEL0hzK1hWb1VsVktWaHo1TGY2RnU4VVBUUOSx3T2xZd1BZb1RTZndnWlM4UEpUZGVqSnlJRwoxOFhNMUZkeFRFM2pFOHJCU0JMcHl4amlUbDJYa0t3b01pYzk4MW9hNTdtcCsrSWI/bVF1ZVdMbmNWTHFRNElJCjBoenU4RUV0citsY3lYcU5EMHRKMGc4b2h5MEJTUGl6eVh6Y283aTRjczk1S042bmwzZWpEdnY4RTRwUHVma0oKRmFBUUVuM1hWL3NaUzFMNWZQZ3hKaUkzM3c4TWNYS0EzeEVFSDFHdkVTUEREdThxaDZVU3NuSExuN0h5MHpIdQp0cEQvR1Rhczd0VktzR2RWVDNKaVJKRkd0cWo3TGpuUkxIQzlpWmIzd2xYYnluazRsb0N0RVluWXJCRUVuMXlpCnJxeHlkcFVDQXdFQUFRSkFSTytEc01qTEIwUEJsOVJiaG9MUEsxN0pzSGZRVDhzTitJa0gwaVVsb2FwYmRpQ04KekU5aW1GVHB5enV1RkVVRnZpQWJGVFpYc2FGU3VyUCtBQ2E3bTBib3JpZWJIa0FkMHlVUE9GUmhKOE5TdmpGNQpnUHc5aUhDUU5OQnh2anFKVWZ6Tytmd3YyTXZXZWw4bGo5Ung4b1M1QWpEU2VoRld1aFVmblc2RDdCTlExb0lyCjFBOGJMTEF3SUFBSD==

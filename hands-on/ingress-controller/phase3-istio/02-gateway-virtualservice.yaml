@@ -1,0 +1,384 @@
+# Istio Gateway/VirtualService - 基本設定演習
+
+---
+# Istio Gateway - 外部トラフィック受信の設定
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: webapp-gateway
+  namespace: webapp
+spec:
+  # Istio Ingress Gatewayを使用
+  selector:
+    istio: ingressgateway
+  servers:
+  # HTTP用設定（HTTPSへのリダイレクト）
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - webapp.istio.local
+    - api.istio.local
+    - admin.istio.local
+    tls:
+      httpsRedirect: true
+  # HTTPS用設定
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - webapp.istio.local
+    - api.istio.local
+    - admin.istio.local
+    tls:
+      mode: SIMPLE
+      credentialName: webapp-istio-tls
+
+---
+# VirtualService - Webアプリケーション用トラフィックルーティング
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: webapp-virtualservice
+  namespace: webapp
+spec:
+  hosts:
+  - webapp.istio.local
+  gateways:
+  - webapp-gateway
+  http:
+  # メンテナンスモード用の条件分岐
+  - match:
+    - headers:
+        x-maintenance-mode:
+          exact: "true"
+    route:
+    - destination:
+        host: maintenance-service
+        port:
+          number: 80
+    headers:
+      response:
+        add:
+          x-served-by: "maintenance-page"
+  # A/Bテスト用ルーティング（ヘッダーベース）
+  - match:
+    - headers:
+        x-user-type:
+          exact: "beta"
+    route:
+    - destination:
+        host: webapp-service
+        subset: v2-beta
+    headers:
+      request:
+        add:
+          x-version: "v2-beta"
+      response:
+        add:
+          x-ab-test: "beta-variant"
+  # 地理的ルーティング（カスタムヘッダーベース）
+  - match:
+    - headers:
+        x-user-region:
+          exact: "asia"
+    route:
+    - destination:
+        host: webapp-service
+        subset: asia-region
+    headers:
+      response:
+        add:
+          x-region: "asia"
+  # デフォルトルーティング（プロダクション）
+  - route:
+    - destination:
+        host: webapp-service
+        subset: v1-stable
+      weight: 95
+    - destination:
+        host: webapp-service
+        subset: v2-canary
+      weight: 5
+    # リトライ設定
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    # タイムアウト設定
+    timeout: 10s
+    # フォルトインジェクション（1%のリクエストに5秒の遅延）
+    fault:
+      delay:
+        percentage:
+          value: 1.0
+        fixedDelay: 5s
+
+---
+# VirtualService - API用トラフィックルーティング
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api-virtualservice
+  namespace: webapp
+spec:
+  hosts:
+  - api.istio.local
+  gateways:
+  - webapp-gateway
+  http:
+  # API v1 用ルーティング
+  - match:
+    - uri:
+        prefix: /api/v1
+    route:
+    - destination:
+        host: api-service
+        subset: v1
+    # APIキー検証用ヘッダー追加
+    headers:
+      request:
+        add:
+          x-api-version: "v1"
+        remove:
+        - x-internal-secret
+    # API用のタイムアウトとリトライ
+    timeout: 30s
+    retries:
+      attempts: 2
+      perTryTimeout: 15s
+  # API v2 用ルーティング（GraphQL対応）
+  - match:
+    - uri:
+        prefix: /api/v2
+    - uri:
+        prefix: /graphql
+    route:
+    - destination:
+        host: api-service
+        subset: v2
+    headers:
+      request:
+        add:
+          x-api-version: "v2"
+          x-graphql-enabled: "true"
+    timeout: 60s
+  # 管理用API（IP制限とレート制限）
+  - match:
+    - uri:
+        prefix: /api/admin
+    route:
+    - destination:
+        host: api-admin-service
+    headers:
+      request:
+        add:
+          x-admin-request: "true"
+    # 管理用APIの厳しいタイムアウト
+    timeout: 5s
+
+---
+# DestinationRule - Webアプリケーション用設定
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: webapp-destination-rule
+  namespace: webapp
+spec:
+  host: webapp-service
+  # トラフィックポリシー
+  trafficPolicy:
+    # 負荷分散アルゴリズム
+    loadBalancer:
+      simple: LEAST_CONN
+    # 接続プール設定
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 30s
+        keepAlive:
+          time: 7200s
+          interval: 75s
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 10
+        maxRetries: 3
+        consecutiveGatewayErrors: 5
+        idleTimeout: 90s
+        h2UpgradePolicy: UPGRADE
+    # アウトライアー検出（異常インスタンス除外）
+    outlierDetection:
+      consecutive5xxErrors: 3
+      consecutiveGatewayErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 30
+  # サブセット定義（バージョン別）
+  subsets:
+  # 安定版
+  - name: v1-stable
+    labels:
+      version: v1
+    trafficPolicy:
+      # 安定版用の保守的な設定
+      connectionPool:
+        tcp:
+          maxConnections: 50
+        http:
+          http1MaxPendingRequests: 25
+  # カナリア版
+  - name: v2-canary
+    labels:
+      version: v2
+    trafficPolicy:
+      # カナリア版用の制限的な設定
+      connectionPool:
+        tcp:
+          maxConnections: 20
+        http:
+          http1MaxPendingRequests: 10
+  # ベータ版
+  - name: v2-beta
+    labels:
+      version: v2-beta
+    trafficPolicy:
+      # ベータ版用の実験的な設定
+      connectionPool:
+        tcp:
+          maxConnections: 10
+        http:
+          http1MaxPendingRequests: 5
+  # アジア地域専用
+  - name: asia-region
+    labels:
+      region: asia
+      version: v1
+
+---
+# DestinationRule - API用設定
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: api-destination-rule
+  namespace: webapp
+spec:
+  host: api-service
+  trafficPolicy:
+    # API用の高パフォーマンス設定
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        maxConnections: 200
+        connectTimeout: 10s
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 200
+        maxRequestsPerConnection: 20
+        maxRetries: 2
+        idleTimeout: 60s
+    # API用のサーキットブレーカー
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 25
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+    trafficPolicy:
+      # API v1用の設定
+      connectionPool:
+        http:
+          maxRequestsPerConnection: 50
+  - name: v2
+    labels:
+      version: v2
+    trafficPolicy:
+      # API v2用の設定（GraphQL対応）
+      connectionPool:
+        http:
+          maxRequestsPerConnection: 100
+          idleTimeout: 120s
+
+---
+# ServiceEntry - 外部サービス連携
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-payment-api
+  namespace: webapp
+spec:
+  hosts:
+  - payment-api.external.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+# ServiceEntry - 外部認証サービス
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-auth-service
+  namespace: webapp
+spec:
+  hosts:
+  - auth.external.com
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+
+---
+# VirtualService - 外部サービス用設定
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: external-services-vs
+  namespace: webapp
+spec:
+  hosts:
+  - payment-api.external.com
+  - auth.external.com
+  http:
+  # 支払いAPI用設定
+  - match:
+    - uri:
+        prefix: /
+      headers:
+        host:
+          exact: payment-api.external.com
+    route:
+    - destination:
+        host: payment-api.external.com
+    # 外部API用タイムアウト
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+      retryOn: 5xx,connect-failure,refused-stream
+  # 認証サービス用設定
+  - match:
+    - uri:
+        prefix: /
+      headers:
+        host:
+          exact: auth.external.com
+    route:
+    - destination:
+        host: auth.external.com
+    timeout: 10s
+    retries:
+      attempts: 2
+      perTryTimeout: 5s

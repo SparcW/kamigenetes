@@ -1,0 +1,315 @@
+# セキュアなPod設定例
+# 各セキュリティレベルでの適切な設定パターン
+---
+# Baseline レベル準拠Pod - Webアプリケーション
+apiVersion: v1
+kind: Pod
+metadata:
+  name: baseline-web-app
+  namespace: development
+  labels:
+    app: web-frontend
+    security-level: baseline
+  annotations:
+    description: "Baselineレベル準拠のWebアプリケーション"
+    aws-ecs-equivalent: "Standard ECS Task"
+spec:
+  securityContext:
+    # Pod レベルのセキュリティ設定
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+  - name: web-app
+    image: nginx:1.21-alpine
+    ports:
+    - containerPort: 8080
+    securityContext:
+      # コンテナレベルのセキュリティ設定
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+        add:
+        - NET_BIND_SERVICE
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "250m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
+    volumeMounts:
+    - name: tmp
+      mountPath: /tmp
+    - name: nginx-cache
+      mountPath: /var/cache/nginx
+    - name: nginx-run
+      mountPath: /var/run
+  volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: nginx-cache
+    emptyDir: {}
+  - name: nginx-run
+    emptyDir: {}
+
+---
+# Restricted レベル準拠Pod - APIサーバー
+apiVersion: v1
+kind: Pod
+metadata:
+  name: restricted-api-server
+  namespace: production
+  labels:
+    app: api-backend
+    security-level: restricted
+  annotations:
+    description: "Restrictedレベル準拠のAPIサーバー"
+    aws-ecs-equivalent: "Hardened ECS Task"
+spec:
+  securityContext:
+    # 最厳格なPodレベル設定
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 3001
+    fsGroup: 2001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: api-server
+    image: node:16-alpine
+    command: ["node", "server.js"]
+    ports:
+    - containerPort: 3000
+    securityContext:
+      # 最厳格なコンテナレベル設定
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "500m"
+      limits:
+        memory: "512Mi"
+        cpu: "1000m"
+    env:
+    - name: NODE_ENV
+      value: "production"
+    - name: PORT
+      value: "3000"
+    volumeMounts:
+    - name: tmp
+      mountPath: /tmp
+    - name: app-cache
+      mountPath: /app/cache
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 3000
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 3000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+  volumes:
+  - name: tmp
+    emptyDir: {}
+  - name: app-cache
+    emptyDir: {}
+
+---
+# 金融アプリケーション用Pod - 最高セキュリティ
+apiVersion: v1
+kind: Pod
+metadata:
+  name: financial-processor
+  namespace: financial-app
+  labels:
+    app: payment-processor
+    security-level: maximum
+    compliance: pci-dss
+  annotations:
+    description: "金融決済処理用Pod - 最高セキュリティ"
+    aws-ecs-equivalent: "PCI-DSS Compliant ECS Task"
+spec:
+  securityContext:
+    # 金融業界標準のセキュリティ設定
+    runAsNonRoot: true
+    runAsUser: 2000
+    runAsGroup: 2000
+    fsGroup: 2000
+    seccompProfile:
+      type: RuntimeDefault
+    supplementalGroups: [2000]
+  containers:
+  - name: payment-processor
+    image: alpine:3.16
+    command: 
+    - sleep
+    - "3600"
+    securityContext:
+      # 最厳格な設定
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "1000m"
+      limits:
+        memory: "1Gi"
+        cpu: "2000m"
+    env:
+    - name: ENVIRONMENT
+      value: "production"
+    - name: SECURITY_LEVEL
+      value: "maximum"
+    volumeMounts:
+    - name: tmp
+      mountPath: /tmp
+    - name: secure-data
+      mountPath: /secure
+      readOnly: true
+  volumes:
+  - name: tmp
+    emptyDir:
+      sizeLimit: 100Mi
+  - name: secure-data
+    secret:
+      secretName: financial-secrets
+      defaultMode: 0400
+
+---
+# データベース用Pod - Restricted + 追加セキュリティ
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-database
+  namespace: production
+  labels:
+    app: database
+    security-level: restricted
+    tier: data
+  annotations:
+    description: "セキュアなデータベースPod"
+    aws-ecs-equivalent: "RDS equivalent secure task"
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: database
+    image: postgres:14-alpine
+    env:
+    - name: POSTGRES_DB
+      value: "testdb"
+    - name: POSTGRES_USER
+      valueFrom:
+        secretKeyRef:
+          name: db-credentials
+          key: username
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db-credentials
+          key: password
+    - name: PGDATA
+      value: /var/lib/postgresql/data/pgdata
+    ports:
+    - containerPort: 5432
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    volumeMounts:
+    - name: postgres-data
+      mountPath: /var/lib/postgresql/data
+    - name: tmp
+      mountPath: /tmp
+    - name: run
+      mountPath: /var/run/postgresql
+    livenessProbe:
+      exec:
+        command:
+        - pg_isready
+        - -U
+        - postgres
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      exec:
+        command:
+        - pg_isready
+        - -U
+        - postgres
+      initialDelaySeconds: 5
+      periodSeconds: 5
+  volumes:
+  - name: postgres-data
+    emptyDir: {}
+  - name: tmp
+    emptyDir: {}
+  - name: run
+    emptyDir: {}
+
+---
+# データベース用Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+  namespace: production
+  labels:
+    app: database
+type: Opaque
+data:
+  # username: dbuser (base64エンコード)
+  # password: securepass123 (base64エンコード)
+  username: ZGJ1c2Vy
+  password: c2VjdXJlcGFzczEyMw==
+
+---
+# 金融アプリ用Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: financial-secrets
+  namespace: financial-app
+  labels:
+    app: payment-processor
+    security-level: maximum
+type: Opaque
+data:
+  # api-key: fin-api-key-123456 (base64エンコード)
+  # encryption-key: encrypt-key-abcdef (base64エンコード)
+  api-key: ZmluLWFwaS1rZXktMTIzNDU2
+  encryption-key: ZW5jcnlwdC1rZXktYWJjZGVm

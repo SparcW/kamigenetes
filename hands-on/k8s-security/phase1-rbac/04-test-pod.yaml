@@ -1,0 +1,240 @@
+# テスト用Pod定義
+# 各ServiceAccountでの権限テストを行うPod
+---
+# フロントエンド権限テスト用Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: frontend-test-pod
+  namespace: security-demo
+  labels:
+    app: frontend-test
+    role: rbac-test
+  annotations:
+    description: "フロントエンドServiceAccountの権限テスト用Pod"
+spec:
+  serviceAccountName: frontend-sa
+  containers:
+  - name: test-container
+    image: curlimages/curl:latest
+    command: 
+    - sleep
+    - "3600"
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    env:
+    - name: KUBE_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: frontend-sa-token
+          key: token
+          optional: true
+    volumeMounts:
+    - name: kube-api-access
+      mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      readOnly: true
+  volumes:
+  - name: kube-api-access
+    projected:
+      sources:
+      - serviceAccountToken:
+          path: token
+      - configMap:
+          name: kube-root-ca.crt
+          items:
+          - key: ca.crt
+            path: ca.crt
+      - downwardAPI:
+          items:
+          - path: namespace
+            fieldRef:
+              fieldPath: metadata.namespace
+  restartPolicy: Never
+
+---
+# バックエンド権限テスト用Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backend-test-pod
+  namespace: security-demo
+  labels:
+    app: backend-test
+    role: rbac-test
+  annotations:
+    description: "バックエンドServiceAccountの権限テスト用Pod"
+spec:
+  serviceAccountName: backend-sa
+  containers:
+  - name: test-container
+    image: curlimages/curl:latest
+    command: 
+    - sleep
+    - "3600"
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    volumeMounts:
+    - name: kube-api-access
+      mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      readOnly: true
+  volumes:
+  - name: kube-api-access
+    projected:
+      sources:
+      - serviceAccountToken:
+          path: token
+      - configMap:
+          name: kube-root-ca.crt
+          items:
+          - key: ca.crt
+            path: ca.crt
+      - downwardAPI:
+          items:
+          - path: namespace
+            fieldRef:
+              fieldPath: metadata.namespace
+  restartPolicy: Never
+
+---
+# 管理者権限テスト用Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: admin-test-pod
+  namespace: security-demo
+  labels:
+    app: admin-test
+    role: rbac-test
+  annotations:
+    description: "管理者ServiceAccountの権限テスト用Pod"
+spec:
+  serviceAccountName: database-admin-sa
+  containers:
+  - name: test-container
+    image: curlimages/curl:latest
+    command: 
+    - sleep
+    - "3600"
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    volumeMounts:
+    - name: kube-api-access
+      mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      readOnly: true
+  volumes:
+  - name: kube-api-access
+    projected:
+      sources:
+      - serviceAccountToken:
+          path: token
+      - configMap:
+          name: kube-root-ca.crt
+          items:
+          - key: ca.crt
+            path: ca.crt
+      - downwardAPI:
+          items:
+          - path: namespace
+            fieldRef:
+              fieldPath: metadata.namespace
+  restartPolicy: Never
+
+---
+# 制限された権限テスト用Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: limited-test-pod
+  namespace: security-demo
+  labels:
+    app: limited-test
+    role: rbac-test
+  annotations:
+    description: "制限されたServiceAccountの権限テスト用Pod"
+spec:
+  serviceAccountName: limited-sa
+  containers:
+  - name: test-container
+    image: curlimages/curl:latest
+    command: 
+    - sleep
+    - "3600"
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    volumeMounts:
+    - name: kube-api-access
+      mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      readOnly: true
+  volumes:
+  - name: kube-api-access
+    projected:
+      sources:
+      - serviceAccountToken:
+          path: token
+      - configMap:
+          name: kube-root-ca.crt
+          items:
+          - key: ca.crt
+            path: ca.crt
+      - downwardAPI:
+          items:
+          - path: namespace
+            fieldRef:
+              fieldPath: metadata.namespace
+  restartPolicy: Never
+
+---
+# テスト用ConfigMap（権限テスト対象リソース）
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-config
+  namespace: security-demo
+  labels:
+    purpose: rbac-test
+data:
+  app.properties: |
+    app.name=RBAC Test Application
+    app.version=1.0.0
+    database.host=localhost
+    database.port=5432
+  environment: "development"
+  debug: "true"
+
+---
+# テスト用Secret（権限テスト対象リソース）
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-secret
+  namespace: security-demo
+  labels:
+    purpose: rbac-test
+type: Opaque
+data:
+  # base64エンコードされた値
+  # username: testuser
+  # password: testpass123
+  username: dGVzdHVzZXI=
+  password: dGVzdHBhc3MxMjM=
+  api-key: YWJjZGVmZ2hpams=

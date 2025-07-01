@@ -1,0 +1,126 @@
+# パスベースルーティング - AWS ALBのパスベースルールに相当
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: path-based-route
+  namespace: gateway-advanced
+  annotations:
+    description: "パスベースルーティング - AWS ALBのリスナールールに相当"
+spec:
+  # Phase 1のGatewayを再利用
+  parentRefs:
+  - name: demo-gateway
+    namespace: gateway-demo
+  
+  hostnames:
+  - "advanced.example.com"
+  - "path-demo.local"
+  
+  rules:
+  # ルール1: API v1へのルーティング
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/api/v1"
+    backendRefs:
+    - name: api-v1-service
+      port: 80
+      weight: 100
+  
+  # ルール2: API v2へのルーティング
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/api/v2"
+    backendRefs:
+    - name: api-v2-service
+      port: 80
+      weight: 100
+  
+  # ルール3: 管理者パス（Exact match）
+  - matches:
+    - path:
+        type: Exact
+        value: "/admin"
+    backendRefs:
+    - name: admin-service
+      port: 8080
+      weight: 100
+  
+  # ルール4: 静的ファイル
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/static"
+    backendRefs:
+    - name: static-service
+      port: 80
+      weight: 100
+  
+  # ルール5: ヘルスチェック
+  - matches:
+    - path:
+        type: Exact
+        value: "/health"
+    backendRefs:
+    - name: health-service
+      port: 8080
+      weight: 100
+  
+  # ルール6: フロントエンド（デフォルト）
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/"
+    backendRefs:
+    - name: frontend-service
+      port: 80
+      weight: 100
+
+---
+# パスリライト機能付きルーティング
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: path-rewrite-route
+  namespace: gateway-advanced
+  annotations:
+    description: "パスリライト - AWS ALBのLambda@Edgeに相当"
+spec:
+  parentRefs:
+  - name: demo-gateway
+    namespace: gateway-demo
+  
+  hostnames:
+  - "rewrite.example.com"
+  
+  rules:
+  # 旧APIパスを新APIパスにリライト
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/old-api"
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: "/api/v2"
+    backendRefs:
+    - name: api-v2-service
+      port: 80
+  
+  # レガシーパスを現在のパスにリダイレクト
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/legacy"
+    filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        hostname: advanced.example.com
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: "/api/v2"
+        statusCode: 301

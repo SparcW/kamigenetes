@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-advanced
+  labels:
+    purpose: gateway-api-advanced
+    environment: learning
+    phase: "2"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-canary
+  labels:
+    purpose: gateway-api-canary
+    environment: learning
+    phase: "2"

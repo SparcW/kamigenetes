@@ -1,0 +1,457 @@
+# 3層アプリケーション - NetworkPolicy演習用
+# Frontend (Nginx) → Backend (API) → Database (PostgreSQL)
+---
+# Frontend Application - Nginx Web Server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: security-demo
+  labels:
+    app: frontend
+    tier: web
+  annotations:
+    description: "フロントエンドWebサーバー"
+    aws-ecs-equivalent: "ECS Frontend Service"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+      tier: web
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: web
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      containers:
+      - name: nginx
+        image: nginx:1.21-alpine
+        ports:
+        - containerPort: 80
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+        - name: tmp
+          mountPath: /tmp
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: frontend-config
+      - name: tmp
+        emptyDir: {}
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
+
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: security-demo
+  labels:
+    app: frontend
+    tier: web
+  annotations:
+    description: "フロントエンドサービス"
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+    tier: web
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+
+---
+# Frontend ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: security-demo
+  labels:
+    app: frontend
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+        }
+        
+        location /api/ {
+            proxy_pass http://backend-service:8080/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+    }
+
+---
+# Backend Application - Node.js API Server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: security-demo
+  labels:
+    app: backend
+    tier: api
+  annotations:
+    description: "バックエンドAPIサーバー"
+    aws-ecs-equivalent: "ECS Backend Service"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+      tier: api
+  template:
+    metadata:
+      labels:
+        app: backend
+        tier: api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 2001
+      containers:
+      - name: api-server
+        image: node:16-alpine
+        command: 
+        - sh
+        - -c
+        - |
+          cat > server.js << 'EOF'
+          const http = require('http');
+          const url = require('url');
+          
+          const server = http.createServer((req, res) => {
+            const parsedUrl = url.parse(req.url, true);
+            
+            res.setHeader('Content-Type', 'application/json');
+            
+            if (parsedUrl.pathname === '/health') {
+              res.writeHead(200);
+              res.end(JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }));
+            } else if (parsedUrl.pathname === '/api/users') {
+              res.writeHead(200);
+              res.end(JSON.stringify({ 
+                users: [
+                  { id: 1, name: 'Alice', role: 'admin' },
+                  { id: 2, name: 'Bob', role: 'user' }
+                ]
+              }));
+            } else if (parsedUrl.pathname === '/api/data') {
+              res.writeHead(200);
+              res.end(JSON.stringify({ 
+                message: 'Data from backend',
+                timestamp: new Date().toISOString(),
+                environment: process.env.NODE_ENV || 'development'
+              }));
+            } else {
+              res.writeHead(404);
+              res.end(JSON.stringify({ error: 'Not found' }));
+            }
+          });
+          
+          const port = process.env.PORT || 8080;
+          server.listen(port, '0.0.0.0', () => {
+            console.log(`Backend API server running on port ${port}`);
+          });
+          EOF
+          node server.js
+        ports:
+        - containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "500m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "8080"
+        - name: DB_HOST
+          value: "database-service"
+        - name: DB_PORT
+          value: "5432"
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+      volumes:
+      - name: tmp
+        emptyDir: {}
+
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: security-demo
+  labels:
+    app: backend
+    tier: api
+  annotations:
+    description: "バックエンドAPIサービス"
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+    tier: api
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+
+---
+# Database Application - PostgreSQL
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database
+  namespace: security-demo
+  labels:
+    app: database
+    tier: data
+  annotations:
+    description: "PostgreSQLデータベース"
+    aws-ecs-equivalent: "RDS PostgreSQL or ECS Database Service"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+      tier: data
+  template:
+    metadata:
+      labels:
+        app: database
+        tier: data
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: postgres
+        image: postgres:14-alpine
+        ports:
+        - containerPort: 5432
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        env:
+        - name: POSTGRES_DB
+          value: "appdb"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: password
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: tmp
+          mountPath: /tmp
+        - name: run
+          mountPath: /var/run/postgresql
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - $(POSTGRES_USER)
+            - -d
+            - $(POSTGRES_DB)
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - $(POSTGRES_USER)
+            - -d
+            - $(POSTGRES_DB)
+          initialDelaySeconds: 15
+          periodSeconds: 5
+      volumes:
+      - name: postgres-data
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+      - name: run
+        emptyDir: {}
+
+---
+# Database Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: database-service
+  namespace: security-demo
+  labels:
+    app: database
+    tier: data
+  annotations:
+    description: "データベースサービス"
+spec:
+  type: ClusterIP
+  selector:
+    app: database
+    tier: data
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+
+---
+# Database Credentials Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database-credentials
+  namespace: security-demo
+  labels:
+    app: database
+type: Opaque
+data:
+  # username: appuser (base64エンコード)
+  # password: securepassword123 (base64エンコード)
+  username: YXBwdXNlcg==
+  password: c2VjdXJlcGFzc3dvcmQxMjM=
+
+---
+# ネットワークテスト用Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: network-test-pod
+  namespace: security-demo
+  labels:
+    app: network-test
+    role: testing
+  annotations:
+    description: "ネットワーク接続テスト用Pod"
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+  containers:
+  - name: test-container
+    image: curlimages/curl:latest
+    command: 
+    - sleep
+    - "3600"
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "125m"
+      limits:
+        memory: "128Mi"
+        cpu: "250m"
+    volumeMounts:
+    - name: tmp
+      mountPath: /tmp
+  volumes:
+  - name: tmp
+    emptyDir: {}
+  restartPolicy: Never

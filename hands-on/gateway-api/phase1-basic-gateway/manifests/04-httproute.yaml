@@ -1,0 +1,208 @@
+# Phase 1: HTTPRoute定義
+# アプリケーション固有のルーティング設定
+
+# ReferenceGrant - 名前空間間のリソース参照許可
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: gateway-to-sample-apps
+  namespace: sample-apps
+spec:
+  # sample-appsネームスペースのServiceを
+  # gateway-api-systemネームスペースのGatewayから参照可能にする
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: sample-apps
+  to:
+  - group: ""
+    kind: Service
+
+---
+# フロントエンド用HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: frontend-route
+  namespace: sample-apps
+  labels:
+    app: frontend
+    component: route
+spec:
+  # 使用するGateway
+  parentRefs:
+  - name: basic-gateway
+    namespace: gateway-api-system
+    sectionName: http  # HTTPリスナーを使用
+  
+  # ホスト名設定（開発環境用）
+  hostnames:
+  - frontend.local
+  - localhost
+  
+  # ルーティングルール
+  rules:
+  # ルート（/）へのアクセス
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: frontend-service
+      namespace: sample-apps
+      port: 80
+      weight: 100
+
+---
+# API用HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: api-route
+  namespace: sample-apps
+  labels:
+    app: api
+    component: route
+spec:
+  # 使用するGateway
+  parentRefs:
+  - name: basic-gateway
+    namespace: gateway-api-system
+    sectionName: http  # HTTPリスナーを使用
+  
+  # ホスト名設定
+  hostnames:
+  - api.local
+  - localhost
+  
+  # ルーティングルール
+  rules:
+  # /api/* パスへのアクセス
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api
+    # リクエスト変換フィルター
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: /
+    # リクエストヘッダー追加
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: x-gateway-api
+          value: "phase1-basic"
+        - name: x-route-name
+          value: "api-route"
+    backendRefs:
+    - name: api-service
+      namespace: sample-apps
+      port: 80
+      weight: 100
+  
+  # 直接APIアクセス（/health, /info, /version）
+  - matches:
+    - path:
+        type: Exact
+        value: /health
+    - path:
+        type: Exact
+        value: /info
+    - path:
+        type: Exact
+        value: /version
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: x-direct-api
+          value: "true"
+    backendRefs:
+    - name: api-service
+      namespace: sample-apps
+      port: 80
+
+---
+# HTTPS用HTTPRoute（証明書テスト）
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: https-frontend-route
+  namespace: sample-apps
+  labels:
+    app: frontend
+    component: https-route
+spec:
+  # HTTPS Gatewayリスナーを使用
+  parentRefs:
+  - name: basic-gateway
+    namespace: gateway-api-system
+    sectionName: https  # HTTPSリスナーを使用
+  
+  # ワイルドカード証明書対応
+  hostnames:
+  - frontend.local
+  
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    # HTTPSアクセスを示すヘッダー追加
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: x-forwarded-proto
+          value: "https"
+        - name: x-ssl
+          value: "true"
+    backendRefs:
+    - name: frontend-service
+      namespace: sample-apps
+      port: 80
+
+---
+# HTTPS API用HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: https-api-route
+  namespace: sample-apps
+  labels:
+    app: api
+    component: https-route
+spec:
+  parentRefs:
+  - name: basic-gateway
+    namespace: gateway-api-system
+    sectionName: https
+  
+  hostnames:
+  - api.local
+  
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplacePrefixMatch
+          replacePrefixMatch: /
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: x-forwarded-proto
+          value: "https"
+        - name: x-gateway-api
+          value: "phase1-https"
+    backendRefs:
+    - name: api-service
+      namespace: sample-apps
+      port: 80

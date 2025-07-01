@@ -1,0 +1,302 @@
+# Traefik Ingress Controller 設定
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traefik-system
+---
+# ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik
+  namespace: traefik-system
+---
+# ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: traefik
+rules:
+- apiGroups: [""]
+  resources: ["services", "endpoints", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses", "ingressclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses/status"]
+  verbs: ["update"]
+- apiGroups: ["traefik.containo.us"]
+  resources: ["ingressroutes", "ingressroutetcps", "ingressrouteudps", "middlewares", "middlewaretcps", "tlsoptions", "tlsstores", "traefikservices", "serverstransports"]
+  verbs: ["get", "list", "watch"]
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: traefik
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: traefik
+subjects:
+- kind: ServiceAccount
+  name: traefik
+  namespace: traefik-system
+---
+# ConfigMap - Traefik動的設定
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-config
+  namespace: traefik-system
+data:
+  traefik.yml: |
+    # Traefik動的設定
+    api:
+      dashboard: true
+      insecure: true  # 開発環境用設定
+    
+    # エントリーポイント設定
+    entryPoints:
+      web:
+        address: ":80"
+      websecure:
+        address: ":443"
+    
+    # プロバイダー設定
+    providers:
+      kubernetescrd:
+        endpoints:
+        - https://kubernetes.default.svc:443
+        token: /var/run/secrets/kubernetes.io/serviceaccount/token
+        certAuthFilePath: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      kubernetesingress:
+        endpoints:
+        - https://kubernetes.default.svc:443
+        token: /var/run/secrets/kubernetes.io/serviceaccount/token
+        certAuthFilePath: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    
+    # Let's Encrypt設定（本番環境用）
+    certificatesResolvers:
+      letsencrypt:
+        acme:
+          email: admin@example.com
+          storage: /data/acme.json
+          httpChallenge:
+            entryPoint: web
+    
+    # メトリクス設定
+    metrics:
+      prometheus:
+        addEntryPointsLabels: true
+        addServicesLabels: true
+    
+    # アクセスログ設定
+    accessLog:
+      format: json
+      fields:
+        defaultMode: keep
+        names:
+          StartUTC: drop
+        headers:
+          defaultMode: keep
+          names:
+            User-Agent: redact
+            Authorization: drop
+            Content-Type: keep
+    
+    # ログレベル設定
+    log:
+      level: INFO
+---
+# PersistentVolumeClaim - ACME証明書保存用
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: traefik-acme-storage
+  namespace: traefik-system
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: traefik-system
+  labels:
+    app: traefik
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: traefik
+      containers:
+      - name: traefik
+        image: traefik:v3.0
+        args:
+        - --configfile=/config/traefik.yml
+        ports:
+        - name: web
+          containerPort: 80
+          protocol: TCP
+        - name: websecure
+          containerPort: 443
+          protocol: TCP
+        - name: admin
+          containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+        - name: acme-storage
+          mountPath: /data
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 65532
+          runAsGroup: 65532
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: config
+        configMap:
+          name: traefik-config
+      - name: acme-storage
+        persistentVolumeClaim:
+          claimName: traefik-acme-storage
+---
+# Service - Traefik本体
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: traefik-system
+  labels:
+    app: traefik
+spec:
+  type: NodePort
+  selector:
+    app: traefik
+  ports:
+  - name: web
+    port: 80
+    targetPort: 80
+    nodePort: 30080
+    protocol: TCP
+  - name: websecure
+    port: 443
+    targetPort: 443
+    nodePort: 30443
+    protocol: TCP
+---
+# Service - ダッシュボード
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-dashboard
+  namespace: traefik-system
+  labels:
+    app: traefik
+spec:
+  type: ClusterIP
+  selector:
+    app: traefik
+  ports:
+  - name: dashboard
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+---
+# IngressRoute - ダッシュボードアクセス用
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard
+  namespace: traefik-system
+spec:
+  entryPoints:
+  - web
+  routes:
+  - match: Host(`traefik.local`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+    kind: Rule
+    services:
+    - name: api@internal
+      kind: TraefikService
+---
+# Middleware - レート制限（サンプル）
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: rate-limit
+  namespace: traefik-system
+spec:
+  rateLimit:
+    burst: 20
+    average: 10
+    period: 1m
+---
+# Middleware - 認証ヘッダー追加（サンプル）
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: auth-headers
+  namespace: traefik-system
+spec:
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"
+      X-Forwarded-Port: "443"
+    customResponseHeaders:
+      X-Content-Type-Options: "nosniff"
+      X-Frame-Options: "SAMEORIGIN"
+      X-XSS-Protection: "1; mode=block"
+---
+# Middleware - HTTPS リダイレクト
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: https-redirect
+  namespace: traefik-system
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true

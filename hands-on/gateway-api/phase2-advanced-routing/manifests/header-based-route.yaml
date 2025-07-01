@@ -1,0 +1,149 @@
+# ヘッダーベースルーティング - AWS ALBのヘッダー条件に相当
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: header-based-route
+  namespace: gateway-advanced
+  annotations:
+    description: "ヘッダーベースルーティング - AWS ALBのヘッダー条件に相当"
+spec:
+  parentRefs:
+  - name: demo-gateway
+    namespace: gateway-demo
+  
+  hostnames:
+  - "header-demo.example.com"
+  - "api.advanced.local"
+  
+  rules:
+  # ルール1: APIバージョンヘッダーによるルーティング
+  - matches:
+    - headers:
+      - name: "x-api-version"
+        value: "v2"
+    backendRefs:
+    - name: api-v2-service
+      port: 80
+  
+  - matches:
+    - headers:
+      - name: "x-api-version"
+        value: "v1"
+    backendRefs:
+    - name: api-v1-service
+      port: 80
+  
+  # ルール2: クライアントタイプによるルーティング
+  - matches:
+    - headers:
+      - name: "x-client-type"
+        value: "mobile"
+    backendRefs:
+    - name: mobile-api-service
+      port: 80
+  
+  - matches:
+    - headers:
+      - name: "x-client-type"
+        value: "web"
+    backendRefs:
+    - name: web-api-service
+      port: 80
+  
+  # ルール3: 認証されたユーザー向け
+  - matches:
+    - headers:
+      - name: "authorization"
+        type: Present  # ヘッダーの存在確認
+    backendRefs:
+    - name: authenticated-service
+      port: 80
+  
+  # ルール4: 複数ヘッダー条件（AND条件）
+  - matches:
+    - headers:
+      - name: "x-api-version"
+        value: "v2"
+      - name: "x-feature-flag"
+        value: "beta"
+    backendRefs:
+    - name: beta-api-service
+      port: 80
+  
+  # ルール5: ヘッダー正規表現マッチ（実装依存）
+  - matches:
+    - headers:
+      - name: "user-agent"
+        type: RegularExpression
+        value: ".*Mobile.*"
+    backendRefs:
+    - name: mobile-optimized-service
+      port: 80
+  
+  # デフォルトルート（ヘッダー条件に合わない場合）
+  - backendRefs:
+    - name: default-api-service
+      port: 80
+
+---
+# ヘッダー変換機能付きルーティング
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: header-modifier-route
+  namespace: gateway-advanced
+  annotations:
+    description: "ヘッダー変換 - リクエスト/レスポンスヘッダーの追加・削除"
+spec:
+  parentRefs:
+  - name: demo-gateway
+    namespace: gateway-demo
+  
+  hostnames:
+  - "header-transform.example.com"
+  
+  rules:
+  # リクエストヘッダーの追加・変更
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/api"
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        set:
+        - name: "x-forwarded-by"
+          value: "gateway-api"
+        - name: "x-service-version"
+          value: "v2.0"
+        add:
+        - name: "x-request-id"
+          value: "${request.id}"  # 実装依存
+        remove:
+        - "x-internal-header"
+    backendRefs:
+    - name: api-v2-service
+      port: 80
+  
+  # レスポンスヘッダーの変更
+  - matches:
+    - path:
+        type: PathPrefix
+        value: "/public"
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        set:
+        - name: "cache-control"
+          value: "public, max-age=3600"
+        - name: "x-served-by"
+          value: "gateway-api"
+        add:
+        - name: "x-response-time"
+          value: "${response.time}"  # 実装依存
+        remove:
+        - "server"
+        - "x-powered-by"
+    backendRefs:
+    - name: static-service
+      port: 80

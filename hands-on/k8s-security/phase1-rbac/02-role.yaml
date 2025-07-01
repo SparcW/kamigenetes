@@ -1,0 +1,115 @@
+# Role 定義
+# AWS ECS Task Role Policy に相当するKubernetesの権限定義
+---
+# フロントエンド用Role - Pod読み取り権限のみ
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: security-demo
+  name: pod-reader
+  labels:
+    component: rbac
+    tier: frontend
+  annotations:
+    description: "Pod読み取り専用権限"
+    aws-ecs-equivalent: "ECS-Frontend-ReadOnlyPolicy"
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+
+---
+# バックエンド用Role - ConfigMapとSecret読み取り権限
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: security-demo
+  name: config-reader
+  labels:
+    component: rbac
+    tier: backend
+  annotations:
+    description: "設定とSecret読み取り権限"
+    aws-ecs-equivalent: "ECS-Backend-ConfigPolicy"
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
+
+---
+# データベース管理用Role - Namespace内全権限
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: security-demo
+  name: namespace-admin
+  labels:
+    component: rbac
+    tier: database
+  annotations:
+    description: "Namespace内全リソースへの管理権限"
+    aws-ecs-equivalent: "ECS-Database-AdminPolicy"
+rules:
+- apiGroups: [""]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["apps"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["extensions"]
+  resources: ["*"]
+  verbs: ["*"]
+
+---
+# 制限されたRole - Podの存在確認のみ
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: security-demo
+  name: pod-lister
+  labels:
+    component: rbac
+    tier: test
+  annotations:
+    description: "Pod一覧表示のみの最小権限"
+    aws-ecs-equivalent: "ECS-MinimalReadPolicy"
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list"]
+
+---
+# 開発者用Role - デバッグ権限
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: security-demo
+  name: developer
+  labels:
+    component: rbac
+    tier: development
+  annotations:
+    description: "開発・デバッグ用権限"
+    aws-ecs-equivalent: "ECS-Developer-DebugPolicy"
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "pods/exec"]
+  verbs: ["get", "list", "watch", "create", "delete"]
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
