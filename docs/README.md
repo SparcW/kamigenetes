@@ -58,9 +58,9 @@ Kubernetes環境の構築と設定
 ### 📚 [リファレンス (Reference)](./reference/)
 API、CLI、設定の詳細リファレンス
 
-- **[API リファレンス](./reference/api/)** - Kubernetes API仕様
-- **[CLI リファレンス](./reference/cli/)** - kubectl、helm、kustomizeコマンド
-- **[設定ファイル](./reference/config-files/)** - YAML設定例とベストプラクティス
+- **[API リファレンス](https://kubernetes.io/docs/reference/kubernetes-api/)** - Kubernetes API仕様（公式ドキュメント）
+- **[CLI リファレンス](https://kubernetes.io/docs/reference/kubectl/)** - kubectl、helm、kustomizeコマンド（公式ドキュメント）
+- **[設定ファイル](./reference/config-files.md)** - YAML設定例とベストプラクティス
 - **[用語集](./reference/glossary.md)** - Kubernetes用語とAWS ECS対応表
 
 ## 🛠️ ツール別ガイド
