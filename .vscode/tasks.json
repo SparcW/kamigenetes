@@ -134,6 +134,117 @@
       "options": {
         "cwd": "${workspaceFolder}"
       }
+    },
+    {
+      "label": "Markdown Server - フルデプロイ",
+      "type": "shell",
+      "command": "./deploy.sh",
+      "args": [
+        "deploy"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/markdown-server"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Markdown Server - Dockerビルド",
+      "type": "shell",
+      "command": "./deploy.sh",
+      "args": [
+        "build"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/markdown-server"
+      }
+    },
+    {
+      "label": "Markdown Server - K8sリソース適用",
+      "type": "shell",
+      "command": "./deploy.sh",
+      "args": [
+        "apply"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/markdown-server"
+      }
+    },
+    {
+      "label": "Markdown Server - 状態確認",
+      "type": "shell",
+      "command": "./deploy.sh",
+      "args": [
+        "status"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/markdown-server"
+      }
+    },
+    {
+      "label": "Markdown Server - URL表示",
+      "type": "shell",
+      "command": "./deploy.sh",
+      "args": [
+        "url"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/markdown-server"
+      }
+    },
+    {
+      "label": "Markdown Server - クリーンアップ",
+      "type": "shell",
+      "command": "./deploy.sh",
+      "args": [
+        "cleanup"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/markdown-server"
+      }
     }
   ]
 }

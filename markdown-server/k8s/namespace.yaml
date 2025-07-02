@@ -1,0 +1,12 @@
+# Kubernetes学習ワークスペース - Markdown Server Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-docs
+  labels:
+    app: kubernetes-learning
+    component: documentation
+    env: development
+  annotations:
+    description: "Kubernetes学習ドキュメント用ネームスペース"
+    purpose: "AWS ECS管理者向けMarkdown/Mermaidサーバー"
