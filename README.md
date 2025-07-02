@@ -1,5 +1,6 @@
 # 🚀 Kubernetes学習ワークスペース
-**AWS ECS管理者向け包括的学習ガイド**
+
+これはGithub Copilot(Claude Sonnet 4)で作成した **AWS ECS管理者向け包括的学習ガイド** です。
 
 Kubernetesの公式ドキュメント構造に基づいた学習プラットフォームです。AWS ECSの経験を活かして段階的にKubernetesの概念と実践スキルを習得できます。
 
