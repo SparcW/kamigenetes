@@ -296,6 +296,7 @@
 
     <script>
         const quizData = [
+            // 概要・基本概念
             {
                 question: "Kubernetesで最小のデプロイ単位は何ですか？",
                 options: [
@@ -320,6 +321,126 @@
                 explanation: "宣言的管理では、システムのあるべき状態をYAMLファイルで定義し、Kubernetesがその状態に収束させます。",
                 awsComparison: "CloudFormationのように、インフラの最終状態を定義するのと似ていますが、より動的で継続的な管理が行われます。"
             },
+            
+            // クラスターアーキテクチャ
+            {
+                question: "Kubernetesクラスターのコントロールプレーンに含まれないコンポーネントは？",
+                options: [
+                    "kube-apiserver",
+                    "kubelet",
+                    "etcd",
+                    "kube-scheduler"
+                ],
+                correct: 1,
+                explanation: "kubeletはワーカーノードで動作するコンポーネントで、コントロールプレーンには含まれません。",
+                awsComparison: "AWS ECSではECS Agentがコンテナインスタンス（ワーカーノード相当）で動作するのと同様です。"
+            },
+            
+            // ワークロード
+            {
+                question: "StatefulSetが必要となる典型的なアプリケーションは？",
+                options: [
+                    "ステートレスWebアプリケーション",
+                    "データベース",
+                    "ロードバランサー",
+                    "リバースプロキシ"
+                ],
+                correct: 1,
+                explanation: "データベースは永続的なストレージと安定したネットワークIDが必要なため、StatefulSetを使用します。",
+                awsComparison: "ECSではRDSを別サービスとして使用しますが、KubernetesではStatefulSetでデータベースをクラスター内で運用できます。"
+            },
+            {
+                question: "AWS ECSのサービスディスカバリに最も近いKubernetesの機能は？",
+                options: [
+                    "Pod",
+                    "Service",
+                    "Ingress",
+                    "ConfigMap"
+                ],
+                correct: 1,
+                explanation: "ServiceはPod群への安定したアクセスポイントを提供し、内部的なサービスディスカバリを実現します。",
+                awsComparison: "ECS Service Discoveryと同様に、サービス名でのアクセスと負荷分散を提供します。"
+            },
+            
+            // 設定管理
+            {
+                question: "機密情報を保存するために使用すべきKubernetesリソースは？",
+                options: [
+                    "ConfigMap",
+                    "Secret",
+                    "PersistentVolume",
+                    "ServiceAccount"
+                ],
+                correct: 1,
+                explanation: "Secretは機密情報（パスワード、API キー等）を安全に保存・管理するためのリソースです。",
+                awsComparison: "AWS Secrets ManagerやParameter Store（SecureString）に相当します。"
+            },
+            {
+                question: "AWS ECSのParameter Storeに対応するKubernetesの機能は？",
+                options: [
+                    "Secret のみ",
+                    "ConfigMap のみ",
+                    "ConfigMap と Secret",
+                    "Environment Variables のみ"
+                ],
+                correct: 2,
+                explanation: "Parameter Storeの非機密設定はConfigMap、機密情報はSecretで管理し、両方を組み合わせて使用します。",
+                awsComparison: "Parameter Store の String パラメータは ConfigMap、SecureString パラメータは Secret で対応します。"
+            },
+            
+            // セキュリティ
+            {
+                question: "Pod Security Standardsの3つのレベルで最も制限が厳しいのは？",
+                options: [
+                    "Privileged",
+                    "Baseline",
+                    "Restricted",
+                    "Secure"
+                ],
+                correct: 2,
+                explanation: "Restrictedは最も厳格なセキュリティ制限を適用し、セキュリティ重視の環境で使用されます。",
+                awsComparison: "ECSのタスク定義の最も厳しいセキュリティ設定に相当し、非root実行や権限昇格の禁止などが含まれます。"
+            },
+            {
+                question: "AWS Security GroupsとKubernetesで同様の機能を提供するのは？",
+                options: [
+                    "RBAC",
+                    "Pod Security Policy",
+                    "NetworkPolicy",
+                    "ServiceAccount"
+                ],
+                correct: 2,
+                explanation: "NetworkPolicyはPod間のネットワーク通信を制御し、AWS Security Groupsと同様の機能を提供します。",
+                awsComparison: "Security GroupsのようにIngress/Egressルールを定義しますが、より細かいアプリケーションレベルでの制御が可能です。"
+            },
+            
+            // ストレージ
+            {
+                question: "AWS EBSボリュームに対応するKubernetesの概念の組み合わせは？",
+                options: [
+                    "Volume のみ",
+                    "PersistentVolume のみ",
+                    "PVC + PV + StorageClass",
+                    "ConfigMap + Secret"
+                ],
+                correct: 2,
+                explanation: "EBSボリュームの動的プロビジョニングには、PVC（要求）、PV（リソース）、StorageClass（プロビジョナー）の組み合わせが必要です。",
+                awsComparison: "ECSではタスク定義でEBSボリュームを直接指定しますが、Kubernetesはより抽象化されたストレージ管理を提供します。"
+            },
+            {
+                question: "複数のPodから同時にアクセス可能なストレージアクセスモードは？",
+                options: [
+                    "ReadWriteOnce",
+                    "ReadWriteMany",
+                    "ReadOnlyMany",
+                    "WriteOnlyMany"
+                ],
+                correct: 1,
+                explanation: "ReadWriteManyは複数のノードから同時に読み書き可能で、EFSやNFSで利用されます。",
+                awsComparison: "AWS EFSをECSのタスク間で共有するのと同様の機能を提供します。"
+            },
+            
+            // ネットワーキング
             {
                 question: "Kubernetesでアプリケーションを外部に公開するために主に使用されるリソースは？",
                 options: [
@@ -333,64 +454,80 @@
                 awsComparison: "AWS ALB（Application Load Balancer）のような役割を果たし、パスベースやホストベースのルーティングが可能です。"
             },
             {
-                question: "ConfigMapの主な用途は何ですか？",
+                question: "AWS ALBとKubernetesの組み合わせで最適なのは？",
                 options: [
-                    "機密情報の保存",
-                    "設定データの保存",
-                    "ログの保存",
-                    "イメージの保存"
+                    "Service (LoadBalancer) のみ",
+                    "Ingress + AWS Load Balancer Controller",
+                    "NodePort + 手動ALB設定",
+                    "ClusterIP のみ"
                 ],
                 correct: 1,
-                explanation: "ConfigMapは設定データをアプリケーションから分離して保存するために使用されます。機密情報にはSecretを使用します。",
-                awsComparison: "AWS Systems Manager Parameter Store（非機密情報）に相当します。環境変数や設定ファイルとしてPodに注入できます。"
+                explanation: "Ingress + AWS Load Balancer Controllerの組み合わせで、ALBの高度な機能を活用できます。",
+                awsComparison: "ECSでのALB統合と同様の機能を、より宣言的に管理できます。"
+            },
+            
+            // 監視とログ
+            {
+                question: "Observabilityの3つの柱に含まれないものは？",
+                options: [
+                    "Metrics（メトリクス）",
+                    "Logs（ログ）",
+                    "Traces（トレーシング）",
+                    "Events（イベント）"
+                ],
+                correct: 3,
+                explanation: "Observabilityの3つの柱は、Metrics、Logs、Tracesです。Eventsは重要ですが、柱の一つではありません。",
+                awsComparison: "CloudWatchでもメトリクス、ログ、X-Rayトレーシングが基本的な監視要素です。"
+            },
+            {
+                question: "Kubernetesクラスターの監視で最も一般的な組み合わせは？",
+                options: [
+                    "CloudWatch + CloudTrail",
+                    "Prometheus + Grafana",
+                    "ElasticSearch + Kibana",
+                    "Fluentd + InfluxDB"
+                ],
+                correct: 1,
+                explanation: "Prometheus（メトリクス収集）+ Grafana（可視化）は、Kubernetesクラスター監視の標準的な組み合わせです。",
+                awsComparison: "CloudWatch Metrics + CloudWatch Dashboardsと同様の役割を果たしますが、より柔軟なカスタマイズが可能です。"
+            },
+            
+            // スケーリング・オートメーション
+            {
+                question: "Pod数の自動調整を行うKubernetesの機能は？",
+                options: [
+                    "Vertical Pod Autoscaler (VPA)",
+                    "Horizontal Pod Autoscaler (HPA)",
+                    "Cluster Autoscaler",
+                    "Manual Scaling"
+                ],
+                correct: 1,
+                explanation: "HPA（Horizontal Pod Autoscaler）は、メトリクスに基づいてPod数を自動的に調整します。",
+                awsComparison: "ECS Service Auto Scalingと同様の機能ですが、より多様なメトリクスソースに対応しています。"
+            },
+            {
+                question: "イベント駆動型スケーリング（ゼロスケーリング対応）を提供するツールは？",
+                options: [
+                    "HPA",
+                    "VPA", 
+                    "KEDA",
+                    "Cluster Autoscaler"
+                ],
+                correct: 2,
+                explanation: "KEDAはSQS、Kafka等のイベントソースに基づくスケーリングを提供し、ゼロスケーリングにも対応しています。",
+                awsComparison: "EventBridge + Lambda + ECS Service Auto Scalingの組み合わせに近い機能を、より統合的に提供します。"
             },
             {
                 question: "Kubernetesの自動修復機能について正しい説明は？",
                 options: [
                     "手動でのみ復旧が可能",
-                    "失敗したPodを自動的に再起動する",
-                    "データベースのみ自動修復される",
-                    "外部サービスが必要"
+                    "失敗したPodを自動的に再起動",
+                    "データの自動バックアップ",
+                    "セキュリティ侵害の自動修復"
                 ],
                 correct: 1,
-                explanation: "Kubernetesは失敗したPodを検出し、自動的に再起動または再作成して、常に宣言された状態を維持しようとします。",
-                awsComparison: "ECSサービスがタスクの異常終了を検出して新しいタスクを起動するのと同様の機能です。"
-            },
-            {
-                question: "Kubernetes Serviceの主な目的は何ですか？",
-                options: [
-                    "コンテナイメージを保存すること",
-                    "Podへの安定したネットワークアクセスを提供すること",
-                    "設定ファイルを管理すること",
-                    "ログを収集すること"
-                ],
-                correct: 1,
-                explanation: "ServiceはPodの集合に対して安定したネットワークエンドポイント（IP、DNS）を提供し、ロードバランシングも行います。",
-                awsComparison: "ELB（Elastic Load Balancer）とRoute 53の組み合わせのような役割で、サービスディスカバリとロードバランシングを提供します。"
-            },
-            {
-                question: "Kubernetesでの水平スケーリングを実現する主要コンポーネントは？",
-                options: [
-                    "Vertical Pod Autoscaler",
-                    "Horizontal Pod Autoscaler", 
-                    "Cluster Autoscaler",
-                    "Node Autoscaler"
-                ],
-                correct: 1,
-                explanation: "Horizontal Pod Autoscaler（HPA）は、CPU使用率やその他のメトリクスに基づいてPod数を自動的に調整します。",
-                awsComparison: "ECS Service Auto Scalingと同様に、CPU使用率やメトリクスに基づいてタスク数を自動調整します。"
-            },
-            {
-                question: "Kubernetes NamespaceはAWS ECSの何に最も近い概念ですか？",
-                options: [
-                    "Availability Zone",
-                    "Security Group",
-                    "Cluster内での論理分離",
-                    "Load Balancer"
-                ],
-                correct: 2,
-                explanation: "Namespaceはクラスター内でリソースを論理的に分離し、マルチテナント環境を実現します。",
-                awsComparison: "ECSクラスター内でのタグベースの論理分離に近く、開発環境・本番環境の分離などに使用されます。"
+                explanation: "Kubernetesは失敗したPodを検出して自動的に再起動し、宣言された状態を維持します。",
+                awsComparison: "ECSのサービススケジューラと同様に、タスクの異常を検知して新しいタスクを起動します。"
             }
         ];
 
