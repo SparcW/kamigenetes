@@ -201,6 +201,7 @@ winget install Helm.Helm
 - バグ報告やタイポ修正
 - 新しい演習内容の提案
 - AWS ECS経験者からのフィードバック
+- Kubernates経験者からのフィードバック
 
 ---
 **🎯 次のステップ**: [📖 概念を学ぶ](./docs/concepts/) → [🏃 チュートリアルを試す](./docs/tutorials/) → [🧪 ハンズオンを実践](./hands-on-labs/)
