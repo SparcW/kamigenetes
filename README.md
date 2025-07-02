@@ -47,7 +47,6 @@ Kubernetesの公式ドキュメント構造に基づいた学習プラットフ�
 - **[Helm](./tools/helm/)** - パッケージ管理とテンプレート
 - **[Kustomize](./tools/kustomize/)** - 宣言的設定管理
 - **[ArgoCD](./tools/argocd/)** - GitOps継続的デプロイ
-- **[Gateway API](./tools/gateway-api/)** - 次世代ネットワーキング
 
 ### 🧪 [ハンズオンラボ](./hands-on-labs/) - 総合実践演習
 段階的な実習プログラム（2-4週間）
