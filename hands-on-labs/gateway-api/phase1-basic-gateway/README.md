@@ -49,7 +49,7 @@ phase1-basic-gateway/
 ### 1. セットアップ
 ```bash
 # Phase 1ディレクトリに移動
-cd /mnt/c/dev/k8s/hands-on-labs/gateway-api/phase1-basic-gateway
+cd <path-to->/kamigenates/hands-on-labs/gateway-api/phase1-basic-gateway
 
 # Gateway API CRDのインストール（まだの場合）
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml

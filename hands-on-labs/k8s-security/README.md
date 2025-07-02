@@ -72,7 +72,7 @@ kubectl version --client
 ### 1. 環境のセットアップ
 ```bash
 # このディレクトリに移動
-cd /mnt/c/dev/k8s/hands-on-labs/k8s-security
+cd <path-to->/kamigenates/hands-on-labs/k8s-security
 
 # セットアップスクリプトの実行
 ./scripts/setup.sh
