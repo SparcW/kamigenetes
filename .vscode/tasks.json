@@ -8,7 +8,7 @@
       "args": [
         "apply",
         "-f",
-        "${workspaceFolder}/hands-on/sample-app/kubernetes/"
+        "${workspaceFolder}/hands-on-labs/sample-app/kubernetes/"
       ],
       "group": "build",
       "presentation": {
@@ -31,7 +31,7 @@
       "args": [
         "delete",
         "-f",
-        "${workspaceFolder}/hands-on/sample-app/kubernetes/"
+        "${workspaceFolder}/hands-on-labs/sample-app/kubernetes/"
       ],
       "group": "build",
       "presentation": {
@@ -86,7 +86,7 @@
         "build",
         "-t",
         "k8s-sample-app:latest",
-        "./hands-on/sample-app/app"
+        "./hands-on-labs/sample-app/app"
       ],
       "group": "build",
       "presentation": {
@@ -122,7 +122,7 @@
       "args": [
         "install",
         "sample-app",
-        "./hands-on/sample-app/helm-chart/"
+        "./hands-on-labs/sample-app/helm-chart/"
       ],
       "group": "build",
       "presentation": {

@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3層Webアプリケーション学習クイズ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #3B82F6, #1E40AF);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .quiz-container {
+            padding: 40px;
+        }
+        
+        .question-card {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 5px solid #3B82F6;
+            display: none;
+        }
+        
+        .question-card.active {
+            display: block;
+        }
+        
+        .question-number {
+            background: #3B82F6;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        
+        .question {
+            font-size: 1.3em;
+            margin-bottom: 25px;
+            color: #1e293b;
+            line-height: 1.5;
+        }
+        
+        .options {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .option {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+        }
+        
+        .option:hover {
+            border-color: #3B82F6;
+            background: #eff6ff;
+        }
+        
+        .option.selected {
+            border-color: #3B82F6;
+            background: #dbeafe;
+        }
+        
+        .option.correct {
+            border-color: #10b981;
+            background: #d1fae5;
+            color: #047857;
+        }
+        
+        .option.incorrect {
+            border-color: #ef4444;
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .explanation {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fef3c7;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+            display: none;
+        }
+        
+        .explanation.show {
+            display: block;
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            background: #3B82F6;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: #2563eb;
+        }
+        
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .progress-bar {
+            background: #e5e7eb;
+            height: 8px;
+            border-radius: 4px;
+            margin: 30px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #3B82F6, #1d4ed8);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .results {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .score {
+            font-size: 3em;
+            color: #3B82F6;
+            margin-bottom: 20px;
+        }
+        
+        .recommendations {
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .recommendations h3 {
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+        
+        .recommendations ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .recommendations li {
+            background: white;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3B82F6;
+        }
+        
+        .comparison-section {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .comparison-table th {
+            background: #3B82F6;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f1f5f9;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .quiz-container {
+                padding: 20px;
+            }
+            
+            .question-card {
+                padding: 20px;
+            }
+            
+            .navigation {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 3層Webアプリケーション</h1>
+            <p>Kubernetes デプロイ学習クイズ</p>
+        </div>
+        
+        <div class="quiz-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <!-- 質問1 -->
+            <div class="question-card active" data-question="1">
+                <div class="question-number">質問 1/10</div>
+                <div class="question">
+                    Kubernetesでアプリケーションの論理分離を行うために使用される仕組みは何ですか？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">クラスター</div>
+                    <div class="option" data-answer="b">ネームスペース</div>
+                    <div class="option" data-answer="c">ノード</div>
+                    <div class="option" data-answer="d">Pod</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: ネームスペース</strong><br>
+                    ネームスペースはKubernetesでリソースを論理的に分離するための仕組みです。AWS ECSのタグベースの分離よりも強固な分離を提供します。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>論理分離</td>
+                                <td>タグベース</td>
+                                <td>ネームスペース</td>
+                            </tr>
+                            <tr>
+                                <td>リソース制限</td>
+                                <td>サービスレベル</td>
+                                <td>ネームスペースレベル</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 質問2 -->
+            <div class="question-card" data-question="2">
+                <div class="question-number">質問 2/10</div>
+                <div class="question">
+                    ConfigMapとSecretの主な違いは何ですか？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">ConfigMapは設定値、Secretは機密情報を格納</div>
+                    <div class="option" data-answer="b">ConfigMapはYAML、SecretはJSONで記述</div>
+                    <div class="option" data-answer="c">ConfigMapは読み取り専用、Secretは読み書き可能</div>
+                    <div class="option" data-answer="d">違いはない</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: ConfigMapは設定値、Secretは機密情報を格納</strong><br>
+                    ConfigMapは一般的な設定情報、SecretはパスワードやAPIキーなどの機密情報を格納します。Secretの値は自動的にBase64エンコードされ、etcdで暗号化保存されます。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>設定管理</td>
+                                <td>環境変数/Parameter Store</td>
+                                <td>ConfigMap</td>
+                            </tr>
+                            <tr>
+                                <td>機密情報</td>
+                                <td>Secrets Manager</td>
+                                <td>Secret</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 質問3 -->
+            <div class="question-card" data-question="3">
+                <div class="question-number">質問 3/10</div>
+                <div class="question">
+                    データベースの永続化ストレージを要求するために使用されるKubernetesリソースは？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">PersistentVolume</div>
+                    <div class="option" data-answer="b">PersistentVolumeClaim</div>
+                    <div class="option" data-answer="c">Volume</div>
+                    <div class="option" data-answer="d">StorageClass</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: PersistentVolumeClaim</strong><br>
+                    PVCはアプリケーションがストレージを「要求」するためのリソースです。システムが適切なPersistentVolumeを割り当てます。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>ストレージ</td>
+                                <td>EBSの直接アタッチ</td>
+                                <td>PV/PVCによる抽象化</td>
+                            </tr>
+                            <tr>
+                                <td>管理方法</td>
+                                <td>タスク定義で設定</td>
+                                <td>PVCで要求</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 質問4 -->
+            <div class="question-card" data-question="4">
+                <div class="question-number">質問 4/10</div>
+                <div class="question">
+                    Kubernetesで内部サービス間通信を提供するリソースは？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">Ingress</div>
+                    <div class="option" data-answer="b">Service</div>
+                    <div class="option" data-answer="c">LoadBalancer</div>
+                    <div class="option" data-answer="d">NodePort</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: Service</strong><br>
+                    ServiceはPod群に対する安定したアクセスポイントを提供し、内部DNS名で名前解決できます。ClusterIPタイプが内部通信用です。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>サービス検出</td>
+                                <td>Cloud Map/Service Discovery</td>
+                                <td>Service + DNS</td>
+                            </tr>
+                            <tr>
+                                <td>負荷分散</td>
+                                <td>ALB</td>
+                                <td>Service</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 質問5 -->
+            <div class="question-card" data-question="5">
+                <div class="question-number">質問 5/10</div>
+                <div class="question">
+                    Deploymentのローリングアップデートで、古いPodと新しいPodが同時に存在する期間があるのはなぜですか？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">リソースが不足しているため</div>
+                    <div class="option" data-answer="b">ゼロダウンタイムでの更新を実現するため</div>
+                    <div class="option" data-answer="c">設定ミスのため</div>
+                    <div class="option" data-answer="d">Kubernetesのバグ</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: ゼロダウンタイムでの更新を実現するため</strong><br>
+                    ローリングアップデートでは、新しいPodが準備完了（Ready）になってから古いPodを削除することで、サービスの継続性を保ちます。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>更新方法</td>
+                                <td>サービス更新</td>
+                                <td>Deployment更新</td>
+                            </tr>
+                            <tr>
+                                <td>ロールバック</td>
+                                <td>手動で前バージョンに戻す</td>
+                                <td>kubectl rollout undo</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 質問6 -->
+            <div class="question-card" data-question="6">
+                <div class="question-number">質問 6/10</div>
+                <div class="question">
+                    Podのアンチアフィニティ設定の目的は何ですか？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">Podを同じノードに配置する</div>
+                    <div class="option" data-answer="b">Podを異なるノードに分散配置する</div>
+                    <div class="option" data-answer="c">Podのリソース使用量を制限する</div>
+                    <div class="option" data-answer="d">Podの起動時間を短縮する</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: Podを異なるノードに分散配置する</strong><br>
+                    アンチアフィニティにより、同じアプリケーションのPodを異なるノードに配置し、単一障害点を避けて可用性を向上させます。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>配置制御</td>
+                                <td>配置制約</td>
+                                <td>Affinity/Anti-affinity</td>
+                            </tr>
+                            <tr>
+                                <td>可用性向上</td>
+                                <td>Multi-AZ配置</td>
+                                <td>Pod分散配置</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 質問7 -->
+            <div class="question-card" data-question="7">
+                <div class="question-number">質問 7/10</div>
+                <div class="question">
+                    LivenessProbeとReadinessProbeの違いは何ですか？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">LivenessProbeは外部、ReadinessProbeは内部チェック</div>
+                    <div class="option" data-answer="b">LivenessProbeはPod再起動、ReadinessProbeはトラフィック制御</div>
+                    <div class="option" data-answer="c">LivenessProbeは手動、ReadinessProbeは自動</div>
+                    <div class="option" data-answer="d">違いはない</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: LivenessProbeはPod再起動、ReadinessProbeはトラフィック制御</strong><br>
+                    LivenessProbeが失敗するとPodが再起動され、ReadinessProbeが失敗するとServiceからそのPodが除外されます。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>ヘルスチェック</td>
+                                <td>ALBヘルスチェック</td>
+                                <td>Liveness/Readiness Probe</td>
+                            </tr>
+                            <tr>
+                                <td>失敗時の動作</td>
+                                <td>ターゲットから除外</td>
+                                <td>Pod再起動またはトラフィック除外</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 質問8 -->
+            <div class="question-card" data-question="8">
+                <div class="question-number">質問 8/10</div>
+                <div class="question">
+                    Kubernetesで外部からのHTTPSトラフィックを受け付けるために主に使用されるリソースは？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">Service</div>
+                    <div class="option" data-answer="b">Ingress</div>
+                    <div class="option" data-answer="c">Deployment</div>
+                    <div class="option" data-answer="d">Pod</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: Ingress</strong><br>
+                    IngressはHTTP/HTTPSトラフィックのルーティングとSSL終端を提供します。AWS ALBに相当する機能です。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>L7負荷分散</td>
+                                <td>Application Load Balancer</td>
+                                <td>Ingress Controller</td>
+                            </tr>
+                            <tr>
+                                <td>SSL終端</td>
+                                <td>ALB + ACM</td>
+                                <td>Ingress + TLS Secret</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 質問9 -->
+            <div class="question-card" data-question="9">
+                <div class="question-number">質問 9/10</div>
+                <div class="question">
+                    `kubectl port-forward`コマンドの主な用途は何ですか？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">本番環境でのサービス公開</div>
+                    <div class="option" data-answer="b">開発・デバッグ用のローカルアクセス</div>
+                    <div class="option" data-answer="c">Podのスケーリング</div>
+                    <div class="option" data-answer="d">設定ファイルの更新</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: 開発・デバッグ用のローカルアクセス</strong><br>
+                    port-forwardはローカル開発やデバッグ時に、外部公開されていないServiceやPodに一時的にアクセスするためのコマンドです。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>デバッグアクセス</td>
+                                <td>ECS Exec</td>
+                                <td>kubectl port-forward</td>
+                            </tr>
+                            <tr>
+                                <td>ローカル開発</td>
+                                <td>Docker Compose</td>
+                                <td>kubectl port-forward</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 質問10 -->
+            <div class="question-card" data-question="10">
+                <div class="question-number">質問 10/10</div>
+                <div class="question">
+                    3層アーキテクチャのアプリケーションで、各層間の通信で重要な考慮事項は？
+                </div>
+                <div class="options">
+                    <div class="option" data-answer="a">すべての通信をHTTPSで暗号化する</div>
+                    <div class="option" data-answer="b">Service経由でのDNS解決と障害分離</div>
+                    <div class="option" data-answer="c">全て同じPodに配置する</div>
+                    <div class="option" data-answer="d">直接IPアドレスで通信する</div>
+                </div>
+                <div class="explanation">
+                    <strong>正解: Service経由でのDNS解決と障害分離</strong><br>
+                    Serviceを使用することで、各層が疎結合になり、Pod の IP アドレスが変わってもDNS名で接続でき、障害の影響範囲を限定できます。
+                    
+                    <div class="comparison-section">
+                        <h4>📊 ECS vs Kubernetes比較</h4>
+                        <table class="comparison-table">
+                            <tr>
+                                <th>項目</th>
+                                <th>AWS ECS</th>
+                                <th>Kubernetes</th>
+                            </tr>
+                            <tr>
+                                <td>サービス間通信</td>
+                                <td>Service Discovery + ELB</td>
+                                <td>Service + DNS</td>
+                            </tr>
+                            <tr>
+                                <td>障害分離</td>
+                                <td>サービス単位</td>
+                                <td>ネームスペース + Service</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="navigation">
+                <button class="btn" id="prevBtn" onclick="changeQuestion(-1)" disabled>前の質問</button>
+                <button class="btn" id="nextBtn" onclick="changeQuestion(1)">次の質問</button>
+                <button class="btn" id="submitBtn" onclick="showResults()" style="display: none;">結果を見る</button>
+            </div>
+        </div>
+        
+        <div class="results" id="results">
+            <div class="score" id="scoreDisplay"></div>
+            <div id="scoreMessage"></div>
+            
+            <div class="recommendations">
+                <h3>📚 次のステップの推奨事項</h3>
+                <ul id="recommendationsList"></ul>
+            </div>
+            
+            <button class="btn" onclick="restartQuiz()">もう一度挑戦する</button>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            { correct: 'b' },
+            { correct: 'a' },
+            { correct: 'b' },
+            { correct: 'b' },
+            { correct: 'b' },
+            { correct: 'b' },
+            { correct: 'b' },
+            { correct: 'b' },
+            { correct: 'b' },
+            { correct: 'b' }
+        ];
+        
+        let currentQuestion = 1;
+        let answers = {};
+        let score = 0;
+        
+        function selectOption(element, questionNum, answer) {
+            const questionCard = element.closest('.question-card');
+            const options = questionCard.querySelectorAll('.option');
+            
+            options.forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            
+            answers[questionNum] = answer;
+            
+            checkAnswer(questionCard, questionNum, answer);
+        }
+        
+        function checkAnswer(questionCard, questionNum, selectedAnswer) {
+            const options = questionCard.querySelectorAll('.option');
+            const correctAnswer = questions[questionNum - 1].correct;
+            const explanation = questionCard.querySelector('.explanation');
+            
+            options.forEach(option => {
+                const optionAnswer = option.getAttribute('data-answer');
+                if (optionAnswer === correctAnswer) {
+                    option.classList.add('correct');
+                } else if (optionAnswer === selectedAnswer && selectedAnswer !== correctAnswer) {
+                    option.classList.add('incorrect');
+                }
+                option.style.pointerEvents = 'none';
+            });
+            
+            explanation.classList.add('show');
+        }
+        
+        function changeQuestion(direction) {
+            const currentCard = document.querySelector(`[data-question="${currentQuestion}"]`);
+            currentCard.classList.remove('active');
+            
+            currentQuestion += direction;
+            
+            const nextCard = document.querySelector(`[data-question="${currentQuestion}"]`);
+            nextCard.classList.add('active');
+            
+            updateProgress();
+            updateNavigation();
+        }
+        
+        function updateProgress() {
+            const progress = (currentQuestion / 10) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+        
+        function updateNavigation() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            prevBtn.disabled = currentQuestion === 1;
+            
+            if (currentQuestion === 10) {
+                nextBtn.style.display = 'none';
+                submitBtn.style.display = 'inline-block';
+            } else {
+                nextBtn.style.display = 'inline-block';
+                submitBtn.style.display = 'none';
+            }
+        }
+        
+        function showResults() {
+            score = 0;
+            for (let i = 1; i <= 10; i++) {
+                if (answers[i] === questions[i - 1].correct) {
+                    score++;
+                }
+            }
+            
+            document.querySelector('.quiz-container').style.display = 'none';
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.classList.add('show');
+            
+            document.getElementById('scoreDisplay').textContent = `${score}/10`;
+            
+            let message = '';
+            let recommendations = [];
+            
+            if (score >= 9) {
+                message = '🎉 素晴らしい！Kubernetesの理解度が高いです！';
+                recommendations = [
+                    'Helm チャートの作成とパッケージ管理の学習',
+                    'GitOps（ArgoCD）を使用したCI/CDパイプラインの構築',
+                    'Prometheus + Grafanaでの本格的な監視システム構築',
+                    'AWS EKSでの本番環境デプロイ実践'
+                ];
+            } else if (score >= 7) {
+                message = '👍 とても良い理解度です！さらに深く学習しましょう。';
+                recommendations = [
+                    'NetworkPolicyを使用したセキュリティ強化',
+                    'Ingress Controllerの設定と管理',
+                    'StatefulSetを使用したステートフルアプリケーション',
+                    'HorizontalPodAutoscaler（HPA）の実装'
+                ];
+            } else if (score >= 5) {
+                message = '📈 基本は理解できています。実践練習を続けましょう。';
+                recommendations = [
+                    'kubectl コマンドの反復練習',
+                    'YAML マニフェストの書き方復習',
+                    'Service とネットワーキングの概念の再学習',
+                    'ConfigMap/Secret の実際の使用方法の練習'
+                ];
+            } else {
+                message = '📚 基礎からじっくり学習することをお勧めします。';
+                recommendations = [
+                    'Kubernetes 基本概念ガイドの再読',
+                    '手順に従って実際にラボを実行してみる',
+                    'Docker コンテナの基礎知識の確認',
+                    'AWS ECSとの比較表を使った概念の整理'
+                ];
+            }
+            
+            document.getElementById('scoreMessage').textContent = message;
+            
+            const recommendationsList = document.getElementById('recommendationsList');
+            recommendationsList.innerHTML = '';
+            recommendations.forEach(rec => {
+                const li = document.createElement('li');
+                li.textContent = rec;
+                recommendationsList.appendChild(li);
+            });
+        }
+        
+        function restartQuiz() {
+            currentQuestion = 1;
+            answers = {};
+            score = 0;
+            
+            document.querySelectorAll('.question-card').forEach(card => {
+                card.classList.remove('active');
+                card.querySelectorAll('.option').forEach(option => {
+                    option.classList.remove('selected', 'correct', 'incorrect');
+                    option.style.pointerEvents = 'auto';
+                });
+                card.querySelector('.explanation').classList.remove('show');
+            });
+            
+            document.querySelector('[data-question="1"]').classList.add('active');
+            document.querySelector('.quiz-container').style.display = 'block';
+            document.getElementById('results').classList.remove('show');
+            
+            updateProgress();
+            updateNavigation();
+        }
+        
+        // イベントリスナーの設定
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const questionNum = parseInt(this.closest('.question-card').getAttribute('data-question'));
+                    const answer = this.getAttribute('data-answer');
+                    selectOption(this, questionNum, answer);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

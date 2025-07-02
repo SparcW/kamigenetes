@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes概念 - 学習チェッククイズ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #326ce5 0%, #1a73e8 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .quiz-container {
+            padding: 40px;
+        }
+
+        .question-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 5px solid #326ce5;
+        }
+
+        .question-number {
+            color: #326ce5;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .answer-options {
+            list-style: none;
+        }
+
+        .answer-option {
+            margin-bottom: 15px;
+        }
+
+        .answer-option label {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .answer-option label:hover {
+            background: #f1f3f4;
+            border-color: #326ce5;
+        }
+
+        .answer-option input[type="radio"] {
+            margin-right: 15px;
+            transform: scale(1.2);
+            accent-color: #326ce5;
+        }
+
+        .answer-option.correct label {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .answer-option.incorrect label {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .explanation {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .explanation.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .explanation h4 {
+            color: #326ce5;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .explanation h4::before {
+            content: "💡";
+            margin-right: 8px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #326ce5 0%, #1a73e8 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(50, 108, 229, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .results {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(#4CAF50 0deg, #4CAF50 0deg, #e9ecef 0deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            position: relative;
+        }
+
+        .score-circle::before {
+            content: '';
+            width: 120px;
+            height: 120px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        .score-text {
+            position: relative;
+            z-index: 1;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #326ce5;
+        }
+
+        .aws-comparison {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .aws-comparison h5 {
+            color: #856404;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .aws-comparison h5::before {
+            content: "🔄";
+            margin-right: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Kubernetes概念クイズ</h1>
+            <p>AWS ECS管理者向け学習チェック</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="quiz-container" id="quizContainer">
+            <!-- クイズ問題はJavaScriptで動的に生成 -->
+        </div>
+
+        <div class="results" id="results">
+            <h2>🎉 クイズ完了！</h2>
+            <div class="score-circle" id="scoreCircle">
+                <div class="score-text" id="scoreText">0%</div>
+            </div>
+            <h3 id="resultMessage"></h3>
+            <p id="resultDetails"></p>
+            
+            <div style="margin-top: 30px;">
+                <button class="btn" onclick="restartQuiz()">🔄 もう一度挑戦</button>
+                <button class="btn" onclick="goToNextChapter()">📚 次の章へ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            {
+                question: "Kubernetesで最小のデプロイ単位は何ですか？",
+                options: [
+                    "Container",
+                    "Pod", 
+                    "Deployment",
+                    "Service"
+                ],
+                correct: 1,
+                explanation: "Podは1つ以上のコンテナを含む最小のデプロイ可能な単位です。AWS ECSのTaskに相当します。",
+                awsComparison: "AWS ECSのTask（タスク）に相当します。1つのTaskが複数のコンテナを含めるのと同様です。"
+            },
+            {
+                question: "Kubernetesの宣言的管理とは何を意味しますか？",
+                options: [
+                    "手順を詳細に指定すること",
+                    "あるべき状態を定義すること",
+                    "リアルタイムで操作すること", 
+                    "GUI でのみ操作すること"
+                ],
+                correct: 1,
+                explanation: "宣言的管理では、システムのあるべき状態をYAMLファイルで定義し、Kubernetesがその状態に収束させます。",
+                awsComparison: "CloudFormationのように、インフラの最終状態を定義するのと似ていますが、より動的で継続的な管理が行われます。"
+            },
+            {
+                question: "Kubernetesでアプリケーションを外部に公開するために主に使用されるリソースは？",
+                options: [
+                    "Pod",
+                    "ConfigMap",
+                    "Ingress",
+                    "Secret"
+                ],
+                correct: 2,
+                explanation: "IngressはHTTP/HTTPSトラフィックを外部からクラスター内のサービスにルーティングするために使用されます。",
+                awsComparison: "AWS ALB（Application Load Balancer）のような役割を果たし、パスベースやホストベースのルーティングが可能です。"
+            },
+            {
+                question: "ConfigMapの主な用途は何ですか？",
+                options: [
+                    "機密情報の保存",
+                    "設定データの保存",
+                    "ログの保存",
+                    "イメージの保存"
+                ],
+                correct: 1,
+                explanation: "ConfigMapは設定データをアプリケーションから分離して保存するために使用されます。機密情報にはSecretを使用します。",
+                awsComparison: "AWS Systems Manager Parameter Store（非機密情報）に相当します。環境変数や設定ファイルとしてPodに注入できます。"
+            },
+            {
+                question: "Kubernetesの自動修復機能について正しい説明は？",
+                options: [
+                    "手動でのみ復旧が可能",
+                    "失敗したPodを自動的に再起動する",
+                    "データベースのみ自動修復される",
+                    "外部サービスが必要"
+                ],
+                correct: 1,
+                explanation: "Kubernetesは失敗したPodを検出し、自動的に再起動または再作成して、常に宣言された状態を維持しようとします。",
+                awsComparison: "ECSサービスがタスクの異常終了を検出して新しいタスクを起動するのと同様の機能です。"
+            },
+            {
+                question: "Kubernetes Serviceの主な目的は何ですか？",
+                options: [
+                    "コンテナイメージを保存すること",
+                    "Podへの安定したネットワークアクセスを提供すること",
+                    "設定ファイルを管理すること",
+                    "ログを収集すること"
+                ],
+                correct: 1,
+                explanation: "ServiceはPodの集合に対して安定したネットワークエンドポイント（IP、DNS）を提供し、ロードバランシングも行います。",
+                awsComparison: "ELB（Elastic Load Balancer）とRoute 53の組み合わせのような役割で、サービスディスカバリとロードバランシングを提供します。"
+            },
+            {
+                question: "Kubernetesでの水平スケーリングを実現する主要コンポーネントは？",
+                options: [
+                    "Vertical Pod Autoscaler",
+                    "Horizontal Pod Autoscaler", 
+                    "Cluster Autoscaler",
+                    "Node Autoscaler"
+                ],
+                correct: 1,
+                explanation: "Horizontal Pod Autoscaler（HPA）は、CPU使用率やその他のメトリクスに基づいてPod数を自動的に調整します。",
+                awsComparison: "ECS Service Auto Scalingと同様に、CPU使用率やメトリクスに基づいてタスク数を自動調整します。"
+            },
+            {
+                question: "Kubernetes NamespaceはAWS ECSの何に最も近い概念ですか？",
+                options: [
+                    "Availability Zone",
+                    "Security Group",
+                    "Cluster内での論理分離",
+                    "Load Balancer"
+                ],
+                correct: 2,
+                explanation: "Namespaceはクラスター内でリソースを論理的に分離し、マルチテナント環境を実現します。",
+                awsComparison: "ECSクラスター内でのタグベースの論理分離に近く、開発環境・本番環境の分離などに使用されます。"
+            }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function renderQuestion() {
+            const question = quizData[currentQuestion];
+            const container = document.getElementById('quizContainer');
+            
+            container.innerHTML = `
+                <div class="question-card fade-in">
+                    <div class="question-number">質問 ${currentQuestion + 1} / ${quizData.length}</div>
+                    <div class="question-text">${question.question}</div>
+                    <ul class="answer-options">
+                        ${question.options.map((option, index) => `
+                            <li class="answer-option">
+                                <label>
+                                    <input type="radio" name="answer" value="${index}" onchange="selectAnswer(${index})">
+                                    ${option}
+                                </label>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div class="explanation" id="explanation">
+                        <h4>解説</h4>
+                        <p>${question.explanation}</p>
+                        <div class="aws-comparison">
+                            <h5>AWS ECS との比較</h5>
+                            <p>${question.awsComparison}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="navigation">
+                    <button class="btn" onclick="previousQuestion()" ${currentQuestion === 0 ? 'disabled' : ''}>
+                        ⬅️ 前の問題
+                    </button>
+                    <span>${currentQuestion + 1} / ${quizData.length}</span>
+                    <button class="btn" id="nextBtn" onclick="nextQuestion()" disabled>
+                        ${currentQuestion === quizData.length - 1 ? '結果を見る' : '次の問題'} ➡️
+                    </button>
+                </div>
+            `;
+            
+            answered = false;
+            updateProgress();
+        }
+
+        function selectAnswer(selectedIndex) {
+            if (answered) return;
+            
+            answered = true;
+            const question = quizData[currentQuestion];
+            const options = document.querySelectorAll('.answer-option');
+            
+            options.forEach((option, index) => {
+                if (index === question.correct) {
+                    option.classList.add('correct');
+                } else if (index === selectedIndex && index !== question.correct) {
+                    option.classList.add('incorrect');
+                }
+                
+                const input = option.querySelector('input[type="radio"]');
+                input.disabled = true;
+            });
+            
+            if (selectedIndex === question.correct) {
+                score++;
+            }
+            
+            document.getElementById('explanation').classList.add('show');
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function nextQuestion() {
+            if (!answered) return;
+            
+            if (currentQuestion < quizData.length - 1) {
+                currentQuestion++;
+                renderQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                renderQuestion();
+            }
+        }
+
+        function updateProgress() {
+            const progress = ((currentQuestion + 1) / quizData.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function showResults() {
+            document.getElementById('quizContainer').style.display = 'none';
+            document.getElementById('results').classList.add('show');
+            
+            const percentage = Math.round((score / quizData.length) * 100);
+            const scoreCircle = document.getElementById('scoreCircle');
+            const scoreText = document.getElementById('scoreText');
+            const resultMessage = document.getElementById('resultMessage');
+            const resultDetails = document.getElementById('resultDetails');
+            
+            // アニメーション付きでスコア表示
+            animateScore(percentage);
+            
+            let message, details;
+            if (percentage >= 90) {
+                message = "🌟 素晴らしい！Kubernetesマスター級です！";
+                details = "Kubernetesの概念を完璧に理解しています。次のチュートリアルに進んで実践的なスキルを身につけましょう。";
+            } else if (percentage >= 70) {
+                message = "👏 良く出来ました！概念理解は十分です。";
+                details = "基本的な概念は理解できています。不正解だった問題を復習してから次に進みましょう。";
+            } else if (percentage >= 50) {
+                message = "📚 もう少し復習が必要です。";
+                details = "いくつかの重要な概念の理解が不十分です。概念ガイドを再読してから再挑戦することをお勧めします。";
+            } else {
+                message = "🔄 概念ガイドを再確認しましょう。";
+                details = "基本概念の理解が不足しています。概念ガイドをじっくり読み返してから再挑戦してください。";
+            }
+            
+            resultMessage.textContent = message;
+            resultDetails.textContent = details;
+        }
+
+        function animateScore(targetPercentage) {
+            const scoreText = document.getElementById('scoreText');
+            const scoreCircle = document.getElementById('scoreCircle');
+            let currentPercentage = 0;
+            
+            const animation = setInterval(() => {
+                currentPercentage += 2;
+                if (currentPercentage >= targetPercentage) {
+                    currentPercentage = targetPercentage;
+                    clearInterval(animation);
+                }
+                
+                scoreText.textContent = currentPercentage + '%';
+                const degrees = (currentPercentage / 100) * 360;
+                scoreCircle.style.background = `conic-gradient(#4CAF50 ${degrees}deg, #e9ecef ${degrees}deg)`;
+            }, 30);
+        }
+
+        function restartQuiz() {
+            currentQuestion = 0;
+            score = 0;
+            answered = false;
+            document.getElementById('quizContainer').style.display = 'block';
+            document.getElementById('results').classList.remove('show');
+            renderQuestion();
+        }
+
+        function goToNextChapter() {
+            window.location.href = '../cluster-architecture.md';
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            renderQuestion();
+        });
+    </script>
+</body>
+</html>

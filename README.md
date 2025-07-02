@@ -27,10 +27,10 @@
 
 ## 🛠️ ハンズオン演習
 
-- [サンプルアプリケーションのデプロイ](./hands-on/sample-app/)
-- [ECSタスクのKubernetes移行演習](./hands-on/ecs-migration/)
-- [ロードバランシングの設定](./hands-on/load-balancing/)
-- [データベース接続](./hands-on/database-connection/)
+- [サンプルアプリケーションのデプロイ](./hands-on-labs/sample-app/)
+- [ECSタスクのKubernetes移行演習](./hands-on-labs/ecs-migration/)
+- [ロードバランシングの設定](./hands-on-labs/load-balancing/)
+- [データベース接続](./hands-on-labs/database-connection/)
 
 ## 🔄 移行ガイド
 
@@ -111,7 +111,7 @@ kubectl cluster-info
 ### 2. サンプルアプリケーションのデプロイ
 ```powershell
 # このリポジトリをクローン後
-cd hands-on/sample-app
+cd hands-on-labs/sample-app
 
 # 詳細な手順は deployment-guide.md を参照
 # VS Code タスクを使用してデプロイ実行

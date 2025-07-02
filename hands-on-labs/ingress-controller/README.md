@@ -113,7 +113,7 @@ jq --version
 ### 1. 演習環境のセットアップ
 ```bash
 # リポジトリのクローン（すでに完了している場合はスキップ）
-cd /mnt/c/dev/k8s/hands-on/ingress-controller
+cd /mnt/c/dev/k8s/hands-on-labs/ingress-controller
 
 # セットアップスクリプトの実行
 ./scripts/setup-environment.sh
