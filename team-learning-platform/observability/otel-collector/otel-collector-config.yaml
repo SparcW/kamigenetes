@@ -30,10 +30,7 @@ receivers:
     operators:
       - type: json_parser
         parse_from: body
-        parse_to: body
-      - type: timestamp_parser
-        parse_from: body.timestamp
-        layout: '%Y-%m-%d %H:%M:%S'
+        parse_to: attributes
 
 processors:
   # バッチ処理（性能向上）
@@ -104,17 +101,6 @@ exporters:
       - http://elasticsearch:9200
     logs_index: team-learning-logs
     traces_index: team-learning-traces
-    metrics_index: team-learning-metrics
-    pipeline: team-learning-pipeline
-    mapping:
-      mode: ecs
-      fields:
-        "@timestamp": "@timestamp"
-        "message": "message"
-        "level": "level"
-        "service": "service.name"
-        "trace_id": "trace.id"
-        "span_id": "span.id"
 
   # デバッグ用ログ出力
   logging:

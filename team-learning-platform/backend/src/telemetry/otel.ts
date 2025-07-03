@@ -14,7 +14,7 @@ import { ContainerDetector } from '@opentelemetry/resource-detector-container';
 const serviceName = process.env.OTEL_SERVICE_NAME || 'team-learning-backend';
 const serviceVersion = process.env.npm_package_version || '1.0.0';
 const environment = process.env.NODE_ENV || 'development';
-const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://otel-collector:4318';
+const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4319';
 
 // リソース設定
 const resource = new Resource({

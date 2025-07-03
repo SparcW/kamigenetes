@@ -14,7 +14,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/prisma/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - team-learning-network
     healthcheck:
@@ -44,7 +43,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: team-learning-backend
     environment:
       NODE_ENV: development
@@ -89,13 +88,13 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: team-learning-frontend
     environment:
-      REACT_APP_API_URL: http://localhost:3001/api
-      REACT_APP_GOOGLE_CLIENT_ID: your_google_client_id
-      REACT_APP_GITHUB_CLIENT_ID: your_github_client_id
-      CHOKIDAR_USEPOLLING: true
+      VITE_API_URL: http://localhost:3001/api
+      VITE_GOOGLE_CLIENT_ID: your_google_client_id
+      VITE_GITHUB_CLIENT_ID: your_github_client_id
+      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "3000:3000"
     volumes:
@@ -105,7 +104,6 @@ services:
       - backend
     networks:
       - team-learning-network
-    command: npm start
 
   # 既存のmarkdown-server (統合)
   markdown-server:

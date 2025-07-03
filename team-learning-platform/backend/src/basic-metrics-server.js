@@ -1,9 +1,16 @@
+// OpenTelemetry初期化（他のインポートより前に実行）
+require('./telemetry/otel.js');
+
 // 基本メトリクスサーバー
-// prom-clientとwinstonを使用した基本的な観測可能性テスト
+// prom-client、winston、OpenTelemetryを使用した統合観測可能性テスト
 
 const express = require('express');
 const { register, Counter, Histogram, Gauge } = require('prom-client');
 const winston = require('winston');
+
+// OpenTelemetry インポート
+const { trace, context, SpanStatusCode } = require('@opentelemetry/api');
+const tracer = trace.getTracer('team-learning-backend', '1.0.0');
 
 // ファイル出力ロガーの設定
 const fs = require('fs');
@@ -130,8 +137,21 @@ const learningEventsTotal = new Counter({
   labelNames: ['user_id', 'event_type', 'course_id']
 });
 
-// メトリクス記録ミドルウェア
-const metricsMiddleware = (req, res, next) => {
+// メトリクス記録とトレーシングの統合ミドルウェア
+const metricsAndTracingMiddleware = (req, res, next) => {
+  // OpenTelemetryスパン開始
+  const span = tracer.startSpan(`${req.method} ${req.path}`, {
+    kind: 1, // SERVER
+    attributes: {
+      'http.method': req.method,
+      'http.url': req.url,
+      'http.scheme': req.protocol,
+      'http.host': req.get('host'),
+      'http.user_agent': req.get('user-agent'),
+      'user.ip': req.ip
+    }
+  });
+
   const startTime = Date.now();
   
   res.on('finish', () => {
@@ -139,6 +159,19 @@ const metricsMiddleware = (req, res, next) => {
     const method = req.method;
     const route = req.route?.path || req.path;
     const statusCode = res.statusCode.toString();
+    
+    // スパンの更新
+    span.setAttributes({
+      'http.status_code': res.statusCode,
+      'http.response.duration_ms': duration * 1000
+    });
+    
+    if (res.statusCode >= 400) {
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: `HTTP ${res.statusCode}`
+      });
+    }
     
     // HTTPメトリクス記録
     httpRequestsTotal.inc({
@@ -152,14 +185,19 @@ const metricsMiddleware = (req, res, next) => {
       duration
     );
     
-    // アプリケーションログ記録
+    // アプリケーションログ記録（トレース情報付き）
+    const traceId = span.spanContext().traceId;
+    const spanId = span.spanContext().spanId;
+    
     logger.info('HTTP Request', {
       method: method,
       route: route,
       statusCode: statusCode,
       duration: duration,
       userAgent: req.headers['user-agent'],
-      ip: req.ip
+      ip: req.ip,
+      traceId: traceId,
+      spanId: spanId
     });
     
     // アクセスログ記録
@@ -172,16 +210,22 @@ const metricsMiddleware = (req, res, next) => {
       ip: req.ip,
       referer: req.headers['referer'] || '',
       contentLength: res.getHeader('content-length') || 0,
-      responseTime: duration
+      responseTime: duration,
+      traceId: traceId,
+      spanId: spanId
     });
+    
+    // スパンを終了
+    span.end();
   });
   
-  next();
+  // スパンをアクティブにして次のミドルウェアに渡す
+  context.with(trace.setSpan(context.active(), span), next);
 };
 
 // ミドルウェア設定
 app.use(express.json());
-app.use(metricsMiddleware);
+app.use(metricsAndTracingMiddleware);
 
 // ルートエンドポイント
 app.get('/', (req, res) => {

@@ -117,8 +117,8 @@ class App {
 
     // リクエスト情報をコンテキストに追加
     this.app.use((req, res, next) => {
-      req.prisma = this.prisma;
-      req.redis = this.redisClient;
+      (req as any).prisma = this.prisma;
+      (req as any).redis = this.redisClient;
       next();
     });
   }
