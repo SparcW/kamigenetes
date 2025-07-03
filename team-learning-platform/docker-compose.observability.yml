@@ -108,19 +108,15 @@ services:
       - observability
       - development
 
-  # Logstash - ログ変換・転送
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.12.0
-    container_name: team-learning-logstash
+  # Filebeat - ログ収集・転送
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.12.0
+    container_name: team-learning-filebeat
+    user: root
     volumes:
-      - ./observability/logstash/pipeline:/usr/share/logstash/pipeline
-      - ./observability/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
-    ports:
-      - "5044:5044"   # Beats
-      - "5000:5000"   # TCP
-      - "5001:5001"   # HTTP (Winston)
-      - "8080:8080"   # HTTP Alternative
-      - "9600:9600"   # Monitoring
+      - ./observability/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/var/log/team-learning:ro
+      - filebeat_data:/usr/share/filebeat/data
     depends_on:
       - elasticsearch
     networks:
@@ -128,6 +124,7 @@ services:
     profiles:
       - observability
       - development
+    command: ["--strict.perms=false"]
 
   # OpenTelemetry Collector - 統合収集
   otel-collector:
@@ -207,6 +204,8 @@ volumes:
   grafana_data:
     driver: local
   elasticsearch_data:
+    driver: local
+  filebeat_data:
     driver: local
 
 networks:

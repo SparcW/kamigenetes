@@ -1,0 +1,17 @@
+# 最小限のFilebeat設定
+
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/team-learning/*.log
+  fields:
+    service: team-learning-backend
+    environment: development
+  fields_under_root: true
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+
+logging.level: info
+logging.to_files: false

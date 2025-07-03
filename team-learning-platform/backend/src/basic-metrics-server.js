@@ -5,13 +5,15 @@ const express = require('express');
 const { register, Counter, Histogram, Gauge } = require('prom-client');
 const winston = require('winston');
 
-// Logstashへのログ送信設定
-const logstashTransport = new winston.transports.Http({
-  host: 'localhost',
-  port: 5001,
-  path: '/',
-  format: winston.format.json()
-});
+// ファイル出力ロガーの設定
+const fs = require('fs');
+const path = require('path');
+
+// ログディレクトリの作成
+const logDir = path.join(__dirname, '../../logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
 
 // Winstonロガーの設定
 const logger = winston.createLogger({
@@ -23,13 +25,49 @@ const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'team-learning-backend' },
   transports: [
+    // コンソール出力
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
         winston.format.simple()
       )
     }),
-    logstashTransport
+    // アプリケーションログファイル
+    new winston.transports.File({
+      filename: path.join(logDir, 'app.log'),
+      format: winston.format.json(),
+      maxsize: 10485760, // 10MB
+      maxFiles: 5,
+      tailable: true
+    }),
+    // エラーログファイル（エラーレベルのみ）
+    new winston.transports.File({
+      filename: path.join(logDir, 'error.log'),
+      level: 'error',
+      format: winston.format.json(),
+      maxsize: 10485760, // 10MB
+      maxFiles: 5,
+      tailable: true
+    })
+  ],
+});
+
+// アクセスログ用の専用ロガー
+const accessLogger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  defaultMeta: { service: 'team-learning-backend', log_type: 'access' },
+  transports: [
+    new winston.transports.File({
+      filename: path.join(logDir, 'access.log'),
+      format: winston.format.json(),
+      maxsize: 10485760, // 10MB
+      maxFiles: 5,
+      tailable: true
+    })
   ],
 });
 
@@ -114,7 +152,7 @@ const metricsMiddleware = (req, res, next) => {
       duration
     );
     
-    // ログ記録
+    // アプリケーションログ記録
     logger.info('HTTP Request', {
       method: method,
       route: route,
@@ -122,6 +160,19 @@ const metricsMiddleware = (req, res, next) => {
       duration: duration,
       userAgent: req.headers['user-agent'],
       ip: req.ip
+    });
+    
+    // アクセスログ記録
+    accessLogger.info('HTTP Access', {
+      method: method,
+      url: req.originalUrl || req.url,
+      statusCode: statusCode,
+      duration: duration,
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
+      referer: req.headers['referer'] || '',
+      contentLength: res.getHeader('content-length') || 0,
+      responseTime: duration
     });
   });
   
