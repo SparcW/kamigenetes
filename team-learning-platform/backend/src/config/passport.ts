@@ -52,7 +52,7 @@ export function configurePassport(prisma: PrismaClient) {
       usernameField: 'username',
       passwordField: 'password'
     },
-    async (username, password, done) => {
+    async (username: string, password: string, done: any) => {
       try {
         const user = await prisma.user.findFirst({
           where: {
@@ -120,7 +120,7 @@ export function configurePassport(prisma: PrismaClient) {
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         callbackURL: process.env.GOOGLE_CALLBACK_URL || '/api/auth/oauth/google/callback'
       },
-      async (accessToken, refreshToken, profile, done) => {
+      async (accessToken: string, refreshToken: string, profile: any, done: any) => {
         try {
           const email = profile.emails?.[0]?.value;
           if (!email) {
@@ -231,7 +231,7 @@ export function configurePassport(prisma: PrismaClient) {
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
         callbackURL: process.env.GITHUB_CALLBACK_URL || '/api/auth/oauth/github/callback'
       },
-      async (accessToken, refreshToken, profile, done) => {
+      async (accessToken: string, refreshToken: string, profile: any, done: any) => {
         try {
           const email = profile.emails?.[0]?.value;
           if (!email) {
