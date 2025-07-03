@@ -3,9 +3,9 @@ import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import bcrypt from 'bcrypt';
-import { PrismaClient } from '@prisma/client';
+// import { PrismaClient } from '@prisma/client';
 
-export function configurePassport(prisma: PrismaClient) {
+export function configurePassport(/* prisma: PrismaClient */) {
   
   // セッションにユーザーIDを保存
   passport.serializeUser((user: any, done) => {

@@ -82,7 +82,7 @@ services:
         condition: service_healthy
     networks:
       - team-learning-network
-    command: ["npx", "ts-node", "src/simple-api.ts"]
+    command: ["npm", "run", "dev"]
 
   # フロントエンド React アプリ
   frontend:
