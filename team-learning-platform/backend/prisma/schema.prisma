@@ -1,0 +1,231 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ユーザー管理
+model User {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username      String   @unique @db.VarChar(50)
+  email         String   @unique @db.VarChar(100)
+  passwordHash  String?  @map("password_hash") @db.VarChar(255)
+  displayName   String   @map("display_name") @db.VarChar(100)
+  avatarUrl     String?  @map("avatar_url")
+  role          UserRole @default(USER)
+  oauthProvider String?  @map("oauth_provider") @db.VarChar(20)
+  oauthId       String?  @map("oauth_id") @db.VarChar(100)
+  isActive      Boolean  @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // リレーション
+  teamMemberships  TeamMembership[]
+  createdTeams     Team[]           @relation("TeamCreator")
+  readingProgress  ReadingProgress[]
+  favorites        Favorite[]
+  examAttempts     ExamAttempt[]
+  proficiencyLevels ProficiencyLevel[]
+
+  @@map("users")
+}
+
+// チーム管理
+model Team {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?
+  createdBy   String   @map("created_by") @db.Uuid
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // リレーション
+  creator     User             @relation("TeamCreator", fields: [createdBy], references: [id])
+  memberships TeamMembership[]
+
+  @@map("teams")
+}
+
+// チームメンバーシップ
+model TeamMembership {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  teamId   String   @map("team_id") @db.Uuid
+  role     TeamRole @default(MEMBER)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  // リレーション
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@map("team_memberships")
+}
+
+// ドキュメント情報
+model Document {
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  filePath            String  @unique @map("file_path")
+  title               String  @db.VarChar(200)
+  category            String? @db.VarChar(100)
+  estimatedReadingTime Int?   @map("estimated_reading_time") // minutes
+  difficultyLevel     Int?    @map("difficulty_level") // 1-5
+  prerequisites       String[] // array of document IDs
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // リレーション
+  readingProgress   ReadingProgress[]
+  favorites         Favorite[]
+  exams            Exam[]
+  proficiencyLevels ProficiencyLevel[]
+
+  @@map("documents")
+}
+
+// 読書進捗
+model ReadingProgress {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  documentId         String    @map("document_id") @db.Uuid
+  progressPercentage Decimal   @map("progress_percentage") @db.Decimal(5, 2) // 0.00-100.00
+  totalReadingTime   Int       @default(0) @map("total_reading_time") // seconds
+  lastPosition       Int       @default(0) @map("last_position") // scroll position
+  completedAt        DateTime? @map("completed_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  // リレーション
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@map("reading_progress")
+}
+
+// お気に入り
+model Favorite {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  documentId String   @map("document_id") @db.Uuid
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // リレーション
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@map("favorites")
+}
+
+// 試験
+model Exam {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId   String   @map("document_id") @db.Uuid
+  title        String   @db.VarChar(200)
+  examType     ExamType @map("exam_type")
+  description  String?
+  timeLimit    Int?     @map("time_limit") // minutes
+  passingScore Decimal? @map("passing_score") @db.Decimal(5, 2)
+  maxAttempts  Int      @default(3) @map("max_attempts")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // リレーション
+  document  Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  questions ExamQuestion[]
+  attempts  ExamAttempt[]
+
+  @@map("exams")
+}
+
+// 試験問題
+model ExamQuestion {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  examId         String       @map("exam_id") @db.Uuid
+  questionType   QuestionType @map("question_type")
+  questionText   String       @map("question_text")
+  expectedAnswer String?      @map("expected_answer")
+  options        Json?        // for multiple choice
+  points         Int          @default(1)
+  orderIndex     Int          @map("order_index")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  // リレーション
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@map("exam_questions")
+}
+
+// 試験結果
+model ExamAttempt {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  examId      String    @map("exam_id") @db.Uuid
+  score       Decimal?  @db.Decimal(5, 2)
+  totalPoints Int?      @map("total_points")
+  timeTaken   Int?      @map("time_taken") // seconds
+  answers     Json?
+  kubectlLogs String?   @map("kubectl_logs") // for practical exams
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // リレーション
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@map("exam_attempts")
+}
+
+// 習熟度
+model ProficiencyLevel {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  documentId     String   @map("document_id") @db.Uuid
+  level          Int      // 0-5
+  conceptScore   Decimal? @map("concept_score") @db.Decimal(5, 2)
+  practicalScore Decimal? @map("practical_score") @db.Decimal(5, 2)
+  yamlScore      Decimal? @map("yaml_score") @db.Decimal(5, 2)
+  lastUpdated    DateTime @default(now()) @map("last_updated")
+
+  // リレーション
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@map("proficiency_levels")
+}
+
+// 列挙型定義
+enum UserRole {
+  SUPER_ADMIN @map("super_admin")
+  TEAM_MANAGER @map("team_manager")
+  USER @map("user")
+}
+
+enum TeamRole {
+  MANAGER @map("manager")
+  MEMBER @map("member")
+}
+
+enum ExamType {
+  CONCEPT @map("concept")
+  YAML @map("yaml")
+  PRACTICAL @map("practical")
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE @map("multiple_choice")
+  YAML_GENERATION @map("yaml_generation")
+  KUBECTL_COMMAND @map("kubectl_command")
+}
