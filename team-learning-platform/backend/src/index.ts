@@ -1,3 +1,6 @@
+// OpenTelemetry初期化（最初にインポート）
+import './telemetry/otel';
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -130,6 +133,18 @@ class App {
         environment: config.nodeEnv,
         version: process.env.npm_package_version || '1.0.0',
       });
+    });
+
+    // Prometheusメトリクス
+    this.app.get('/metrics', async (req, res) => {
+      try {
+        const { register } = await import('prom-client');
+        res.set('Content-Type', register.contentType);
+        const metrics = await register.metrics();
+        res.end(metrics);
+      } catch (error) {
+        res.status(500).end('Error generating metrics');
+      }
     });
 
     // API ルート

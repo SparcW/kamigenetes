@@ -64,6 +64,13 @@ services:
       GITHUB_CLIENT_SECRET: your_github_client_secret
       # CORS設定
       FRONTEND_URL: http://localhost:3000
+      # OpenTelemetry設定
+      OTEL_SERVICE_NAME: team-learning-backend
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_RESOURCE_ATTRIBUTES: service.name=team-learning-backend,service.version=1.0.0,environment=development
+      # ログ設定
+      LOG_LEVEL: info
+      ELASTICSEARCH_URL: http://elasticsearch:9200
     ports:
       - "3001:3001"
     volumes:
