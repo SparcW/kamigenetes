@@ -116,9 +116,80 @@
 
         // ページ読み込み時の初期化
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('📖 Kubernetes学習ドキュメントサーバーを初期化中...');
+            
+            // Mermaidの設定
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'default',
+                securityLevel: 'loose',
+                fontFamily: 'monospace',
+                fontSize: 16,
+                flowchart: { useMaxWidth: true },
+                sequence: { useMaxWidth: true },
+                gantt: { useMaxWidth: true }
+            });
+            
             loadFileList();
             setupEventListeners();
+            handleInitialRoute();
         });
+
+        // 初期ルート処理
+        function handleInitialRoute() {
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/') {
+                resolveAndLoadFile(currentPath);
+            }
+            
+            // ブラウザの戻る/進むボタン対応
+            window.addEventListener('popstate', () => {
+                const newPath = window.location.pathname;
+                if (newPath === '/') {
+                    showWelcomeScreen();
+                } else {
+                    resolveAndLoadFile(newPath);
+                }
+            });
+        }
+
+        // ファイルパス解決と読み込み
+        async function resolveAndLoadFile(requestPath) {
+            console.log(`[DEBUG] ファイルパス解決開始: ${requestPath}`);
+            
+            try {
+                // まず、パス解決APIを呼び出し
+                const cleanPath = requestPath.startsWith('/') ? requestPath.substring(1) : requestPath;
+                const resolveResponse = await fetch(`/api/resolve/${cleanPath}`);
+                
+                if (resolveResponse.ok) {
+                    const resolveData = await resolveResponse.json();
+                    console.log(`[DEBUG] パス解決成功: ${requestPath} -> ${resolveData.resolvedPath}`);
+                    await loadFile(resolveData.resolvedPath);
+                    return;
+                }
+                
+                // パス解決に失敗した場合、直接ファイルパスとして試行
+                console.log(`[DEBUG] パス解決失敗、直接試行: ${requestPath}`);
+                let filePath = cleanPath;
+                
+                // .mdを追加して試行
+                if (!filePath.endsWith('.md') && !filePath.includes('.')) {
+                    filePath += '.md';
+                }
+                
+                console.log(`[DEBUG] 直接ファイル試行: ${filePath}`);
+                await loadFile(filePath);
+                
+            } catch (error) {
+                console.error('[ERROR] ファイル解決エラー:', error);
+                document.getElementById('contentBody').innerHTML = 
+                    `<div class="error">
+                        ❌ ドキュメント '${requestPath}' が見つかりません
+                        <br><small>詳細: ${error.message}</small>
+                    </div>`;
+            }
+        }
 
         // イベントリスナーの設定
         function setupEventListeners() {
@@ -201,32 +272,149 @@
 
         // Markdownファイルの読み込み
         async function loadFile(filePath) {
+            console.log(`[DEBUG] ファイル読み込み開始: ${filePath}`);
+            
             try {
                 const response = await fetch(`/api/markdown/${filePath}`);
-                const data = await response.json();
+                console.log(`[DEBUG] API レスポンス状態: ${response.status}`);
                 
-                if (response.ok) {
-                    // パンくずリストを更新
-                    document.getElementById('breadcrumb').innerHTML = 
-                        `📖 ${data.filename} <span class="path">${data.path}</span>`;
-                    
-                    // コンテンツを表示
-                    document.getElementById('contentBody').innerHTML = data.html;
-                    
-                    // Mermaid図表を安全に再レンダリング
-                    await renderMermaidDiagrams();
-                    
-                    // コードハイライトを適用
-                    Prism.highlightAll();
-                    
-                } else {
-                    throw new Error(data.error);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
+                
+                const data = await response.json();
+                console.log(`[DEBUG] ファイル読み込み成功: ${data.filename}`);
+                
+                // URLを更新（ブラウザ履歴に追加）
+                const newUrl = `/${filePath}`;
+                if (window.location.pathname !== newUrl) {
+                    window.history.pushState({ filePath }, data.filename, newUrl);
+                    console.log(`[DEBUG] URL更新: ${newUrl}`);
+                }
+                
+                // パンくずリストを更新
+                document.getElementById('breadcrumb').innerHTML = 
+                    `📖 ${data.filename} <span class="path">${data.path}</span>`;
+                
+                // コンテンツを表示
+                document.getElementById('contentBody').innerHTML = data.html;
+                
+                // ドキュメント内リンクのイベントリスナーを設定
+                setupDocumentLinks();
+                
+                // Mermaid図表を安全に再レンダリング
+                await renderMermaidDiagrams();
+                
+                // コードハイライトを適用
+                Prism.highlightAll();
+                
             } catch (error) {
-                console.error('ファイル読み込みエラー:', error);
+                console.error('[ERROR] ファイル読み込みエラー:', error);
                 document.getElementById('contentBody').innerHTML = 
-                    `<div class="error">❌ ファイルの読み込みに失敗しました: ${error.message}</div>`;
+                    `<div class="error">
+                        ❌ ファイルの読み込みに失敗しました: ${error.message}
+                        <br><small>ファイルパス: ${filePath}</small>
+                    </div>`;
             }
+        }
+
+        // ドキュメント内リンクの処理
+        function setupDocumentLinks() {
+            const content = document.getElementById('contentBody');
+            const links = content.querySelectorAll('a[href]');
+            
+            console.log(`[DEBUG] ドキュメント内リンク設定: ${links.length}個のリンク`);
+            
+            links.forEach((link, index) => {
+                const href = link.getAttribute('href');
+                console.log(`[DEBUG] リンク ${index + 1}: ${href}`);
+                
+                // 外部リンクやアンカーリンクはそのまま
+                if (href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) {
+                    link.target = '_blank';
+                    console.log(`[DEBUG] 外部リンク: ${href}`);
+                    return;
+                }
+                
+                // 相対リンクの処理
+                link.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    console.log(`[DEBUG] リンククリック: ${href}`);
+                    
+                    try {
+                        // 現在のファイルのディレクトリを基準に相対パスを解決
+                        const currentPath = window.location.pathname;
+                        const currentDir = currentPath.substring(0, currentPath.lastIndexOf('/'));
+                        let targetPath = href;
+                        
+                        console.log(`[DEBUG] 現在のパス: ${currentPath}`);
+                        console.log(`[DEBUG] 現在のディレクトリ: ${currentDir}`);
+                        console.log(`[DEBUG] 対象href: ${href}`);
+                        
+                        // ../や./の処理
+                        if (href.startsWith('../')) {
+                            const parts = currentDir.split('/').filter(p => p);
+                            const upLevels = (href.match(/\.\.\//g) || []).length;
+                            const remainingPath = href.replace(/\.\.\//g, '');
+                            
+                            console.log(`[DEBUG] ../ 処理: ${upLevels}レベル上, 残りパス: ${remainingPath}`);
+                            
+                            const newParts = parts.slice(0, -upLevels);
+                            targetPath = '/' + [...newParts, remainingPath].filter(p => p).join('/');
+                        } else if (href.startsWith('./')) {
+                            targetPath = currentDir + '/' + href.substring(2);
+                        } else if (!href.startsWith('/')) {
+                            targetPath = currentDir + '/' + href;
+                        }
+                        
+                        // パスの正規化
+                        targetPath = targetPath.replace(/\/+/g, '/');
+                        
+                        console.log(`[DEBUG] 解決されたパス: ${targetPath}`);
+                        
+                        // ファイルを読み込み
+                        await resolveAndLoadFile(targetPath);
+                        
+                    } catch (error) {
+                        console.error('[ERROR] リンク処理エラー:', error);
+                        alert(`リンクの処理に失敗しました: ${error.message}`);
+                    }
+                });
+            });
+        }
+
+        // ウェルカム画面表示
+        function showWelcomeScreen() {
+            // URLを更新
+            if (window.location.pathname !== '/') {
+                window.history.pushState({}, 'Kubernetes学習ドキュメント', '/');
+            }
+            
+            document.getElementById('breadcrumb').innerHTML = '📖 ドキュメントを選択してください';
+            document.getElementById('contentBody').innerHTML = `
+                <div class="welcome-screen">
+                    <div class="welcome-content">
+                        <h1>📖 Kubernetes学習ドキュメント</h1>
+                        <p class="subtitle">AWS ECS管理者向けKubernetes移行ガイド</p>
+                        <div class="features">
+                            <div class="feature">
+                                <h3>📄 段階的学習</h3>
+                                <p>ECSの知識を活かしたステップバイステップの学習</p>
+                            </div>
+                            <div class="feature">
+                                <h3>📊 視覚的解説</h3>
+                                <p>Mermaid図表による分かりやすいアーキテクチャ説明</p>
+                            </div>
+                            <div class="feature">
+                                <h3>🎯 実践重視</h3>
+                                <p>実際のYAMLファイルとハンズオン演習</p>
+                            </div>
+                        </div>
+                        <p class="instruction">👈 左のメニューからドキュメントを選択して学習を開始してください</p>
+                    </div>
+                </div>
+            `;
         }
 
         // Mermaid図表の安全な描画（改良版）
