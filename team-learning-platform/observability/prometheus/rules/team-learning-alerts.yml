@@ -1,0 +1,182 @@
+# チーム学習プラットフォーム アラートルール
+
+groups:
+  # アプリケーション健全性アラート
+  - name: team-learning-application
+    rules:
+      # Backend API 可用性
+      - alert: BackendDown
+        expr: up{job="team-learning-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "Backend API サーバーが停止しています"
+          description: "Backend API サーバーが {{ $value }} 分間停止しています"
+
+      # Frontend 可用性
+      - alert: FrontendDown
+        expr: up{job="team-learning-frontend"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: frontend
+        annotations:
+          summary: "Frontend サーバーが停止しています"
+          description: "Frontend サーバーが {{ $value }} 分間停止しています"
+
+      # API 応答時間異常
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="team-learning-backend"}[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "API 応答時間が異常に高くなっています"
+          description: "95パーセンタイル応答時間が {{ $value }}秒 を超えています"
+
+      # エラー率異常
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{job="team-learning-backend", status=~"5.."}[5m]) / rate(http_requests_total{job="team-learning-backend"}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "API エラー率が異常に高くなっています"
+          description: "エラー率が {{ $value | humanizePercentage }} を超えています"
+
+  # データベース監視アラート
+  - name: team-learning-database
+    rules:
+      # PostgreSQL 停止
+      - alert: PostgreSQLDown
+        expr: up{job="postgres-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "PostgreSQL データベースが停止しています"
+          description: "PostgreSQL データベースが {{ $value }} 分間停止しています"
+
+      # データベース接続数異常
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends{job="postgres-exporter"} > 80
+        for: 2m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "データベース接続数が異常に多くなっています"
+          description: "データベース接続数が {{ $value }} を超えています"
+
+      # スロークエリ検出
+      - alert: SlowQueries
+        expr: rate(pg_stat_database_tup_fetched{job="postgres-exporter"}[5m]) / rate(pg_stat_database_tup_returned{job="postgres-exporter"}[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "スロークエリが検出されました"
+          description: "データベースのフェッチ効率が低下しています"
+
+  # Redis 監視アラート
+  - name: team-learning-redis
+    rules:
+      # Redis 停止
+      - alert: RedisDown
+        expr: up{job="redis-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis サーバーが停止しています"
+          description: "Redis サーバーが {{ $value }} 分間停止しています"
+
+      # Redis メモリ使用率異常
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes{job="redis-exporter"} / redis_memory_max_bytes{job="redis-exporter"} > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis メモリ使用率が高くなっています"
+          description: "Redis メモリ使用率が {{ $value | humanizePercentage }} を超えています"
+
+      # Redis 接続数異常
+      - alert: RedisHighConnectionCount
+        expr: redis_connected_clients{job="redis-exporter"} > 100
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis 接続数が異常に多くなっています"
+          description: "Redis 接続数が {{ $value }} を超えています"
+
+  # システムリソース監視アラート
+  - name: team-learning-system
+    rules:
+      # CPU使用率異常
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "CPU使用率が高くなっています"
+          description: "CPU使用率が {{ $value }}% を超えています"
+
+      # メモリ使用率異常
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "メモリ使用率が高くなっています"
+          description: "メモリ使用率が {{ $value | humanizePercentage }} を超えています"
+
+      # ディスク使用率異常
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "ディスク使用率が高くなっています"
+          description: "ディスク使用率が {{ $value | humanizePercentage }} を超えています"
+
+  # ビジネスメトリクス監視アラート
+  - name: team-learning-business
+    rules:
+      # アクティブユーザー数低下
+      - alert: LowActiveUsers
+        expr: active_users_total < 10
+        for: 10m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "アクティブユーザー数が低下しています"
+          description: "アクティブユーザー数が {{ $value }} 人まで低下しています"
+
+      # 学習完了率低下
+      - alert: LowLearningCompletionRate
+        expr: learning_completion_rate < 0.5
+        for: 30m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "学習完了率が低下しています"
+          description: "学習完了率が {{ $value | humanizePercentage }} まで低下しています"

@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+  # PostgreSQL データベース
+  postgres:
+    image: postgres:15-alpine
+    container_name: team-learning-postgres
+    environment:
+      POSTGRES_DB: team_learning
+      POSTGRES_USER: team_learning_user
+      POSTGRES_PASSWORD: team_learning_pass
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - team-learning-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U team_learning_user -d team_learning"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis セッション・キャッシュ
+  redis:
+    image: redis:7-alpine
+    container_name: team-learning-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass team_learning_redis_pass
+    volumes:
+      - redis_data:/data
+    networks:
+      - team-learning-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "team_learning_redis_pass", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # バックエンド API サーバー
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: team-learning-backend
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      # データベース設定
+      DATABASE_URL: postgresql://team_learning_user:team_learning_pass@postgres:5432/team_learning
+      # Redis設定
+      REDIS_URL: redis://:team_learning_redis_pass@redis:6379
+      # JWT設定
+      JWT_SECRET: team_learning_jwt_secret_key_for_development
+      JWT_EXPIRE: 15m
+      REFRESH_TOKEN_EXPIRE: 7d
+      # OAuth設定 (開発用)
+      GOOGLE_CLIENT_ID: your_google_client_id
+      GOOGLE_CLIENT_SECRET: your_google_client_secret
+      GITHUB_CLIENT_ID: your_github_client_id
+      GITHUB_CLIENT_SECRET: your_github_client_secret
+      # CORS設定
+      FRONTEND_URL: http://localhost:3000
+      # OpenTelemetry設定
+      OTEL_SERVICE_NAME: team-learning-backend
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_RESOURCE_ATTRIBUTES: service.name=team-learning-backend,service.version=1.0.0,environment=development
+      # ログ設定
+      LOG_LEVEL: info
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - team-learning-network
+    command: npm run dev
+
+  # フロントエンド React アプリ
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: team-learning-frontend
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+      VITE_GOOGLE_CLIENT_ID: your_google_client_id
+      VITE_GITHUB_CLIENT_ID: your_github_client_id
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - team-learning-network
+
+  # 既存のmarkdown-server (統合)
+  markdown-server:
+    build:
+      context: ../markdown-server
+      dockerfile: Dockerfile
+    container_name: team-learning-docs
+    environment:
+      PORT: 3002
+      NODE_ENV: development
+    ports:
+      - "3002:3002"
+    volumes:
+      - ../docs:/docs
+    networks:
+      - team-learning-network
+    command: npm run dev
+
+  # Nginx リバースプロキシ (本番用)
+  nginx:
+    image: nginx:alpine
+    container_name: team-learning-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+      - markdown-server
+    networks:
+      - team-learning-network
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  team-learning-network:
+    driver: bridge
+
+# オブザーバビリティスタックを含む設定
+# 使用方法:
+# 基本開発: docker-compose up
+# 観測機能付き: docker-compose --profile development -f docker-compose.yml -f docker-compose.observability.yml up

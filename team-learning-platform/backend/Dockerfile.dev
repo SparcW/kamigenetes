@@ -1,0 +1,26 @@
+# 開発用 Dockerfile
+# Node.js + TypeScript 開発環境
+
+FROM node:18-alpine
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# package.jsonとpackage-lock.jsonをコピー
+COPY package*.json ./
+
+# 依存関係のインストール
+RUN npm install
+
+# Prismaクライアントの生成
+COPY prisma ./prisma/
+RUN npx prisma generate
+
+# ソースコードをコピー
+COPY . .
+
+# ポート3001を公開
+EXPOSE 3001
+
+# 開発サーバーの起動
+CMD ["npm", "run", "dev"]

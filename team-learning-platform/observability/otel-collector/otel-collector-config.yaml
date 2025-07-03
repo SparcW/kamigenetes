@@ -1,0 +1,141 @@
+# OpenTelemetry Collector 設定ファイル
+# トレース・メトリクス・ログの統合収集設定
+
+receivers:
+  # OTLP レシーバー (gRPC)
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "http://localhost:3000"
+            - "http://localhost:3001"
+            - "http://localhost:3002"
+
+  # Prometheus メトリクス収集
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector'
+          static_configs:
+            - targets: ['localhost:8889']
+
+  # ログファイル収集
+  filelog:
+    include: 
+      - /var/log/team-learning/*.log
+    operators:
+      - type: json_parser
+        parse_from: body
+        parse_to: attributes
+
+processors:
+  # バッチ処理（性能向上）
+  batch:
+    timeout: 10s
+    send_batch_size: 1000
+
+  # メモリ制限
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
+  # リソース情報付加
+  resource:
+    attributes:
+      - key: service.name
+        value: team-learning-platform
+        action: upsert
+      - key: service.version
+        value: 1.0.0
+        action: upsert
+      - key: environment
+        value: development
+        action: upsert
+      - key: team
+        value: team-learning
+        action: upsert
+
+  # 属性処理（PII削除・変換）
+  attributes:
+    actions:
+      - key: user.email
+        action: delete
+      - key: user.password
+        action: delete
+      - key: jwt.token
+        action: delete
+
+  # トレース・スパン変換
+  span:
+    name:
+      to_attributes:
+        rules:
+          - ^\/api\/(.*)$
+      from_attributes:
+        - http.method
+        - http.route
+
+exporters:
+  # Tempo エクスポーター
+  otlp/tempo:
+    endpoint: http://tempo:4317
+    tls:
+      insecure: true
+    headers:
+      "X-Scope-OrgID": "team-learning"
+
+  # Prometheus エクスポーター
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    const_labels:
+      team: team-learning
+      environment: development
+
+  # Elasticsearch エクスポーター
+  elasticsearch:
+    endpoints:
+      - http://elasticsearch:9200
+    logs_index: team-learning-logs
+    traces_index: team-learning-traces
+
+  # デバッグ用ログ出力
+  logging:
+    loglevel: debug
+
+  # ファイル出力（開発用）
+  file:
+    path: /var/log/otel-collector.log
+    format: json
+
+service:
+  extensions: []
+  pipelines:
+    # トレース処理パイプライン
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource, attributes, span]
+      exporters: [otlp/tempo, logging]
+
+    # メトリクス処理パイプライン
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, batch, resource, attributes]
+      exporters: [prometheus, logging]
+
+    # ログ処理パイプライン
+    logs:
+      receivers: [otlp, filelog]
+      processors: [memory_limiter, batch, resource, attributes]
+      exporters: [elasticsearch, logging]
+
+  # テレメトリー設定
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888

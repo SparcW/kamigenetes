@@ -1,0 +1,108 @@
+# Prometheus 設定ファイル
+# メトリクス収集・保存設定
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'team-learning-local'
+    environment: 'development'
+
+# アラートルール設定
+rule_files:
+  - "rules/*.yml"
+
+# アラートマネージャー設定（将来拡張用）
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# スクレイプ設定
+scrape_configs:
+  # Prometheus 自身の監視
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+
+  # チーム学習プラットフォーム - Backend
+  - job_name: 'team-learning-backend'
+    static_configs:
+      - targets: ['backend:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # チーム学習プラットフォーム - Frontend (development server)
+  - job_name: 'team-learning-frontend'
+    static_configs:
+      - targets: ['frontend:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Markdown Server (local test)
+  - job_name: 'markdown-server'
+    static_configs:
+      - targets: ['172.17.0.1:3002']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # PostgreSQL メトリクス
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+
+  # Redis メトリクス
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+
+  # システムメトリクス
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # Grafana メトリクス
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Tempo メトリクス
+  - job_name: 'tempo'
+    static_configs:
+      - targets: ['tempo:3200']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # OpenTelemetry Collector メトリクス
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8889']
+    scrape_interval: 15s
+
+  # Elasticsearch メトリクス（将来拡張用）
+  # - job_name: 'elasticsearch'
+  #   static_configs:
+  #     - targets: ['elasticsearch:9200']
+  #   metrics_path: '/_prometheus/metrics'
+  #   scrape_interval: 30s
+
+# データ保持設定（コマンドライン引数で設定）
+# storage:
+#   tsdb:
+#     retention.time: 7d
+#     retention.size: 10GB
+    
+# リモートライト設定（将来拡張用）
+# remote_write:
+#   - url: "http://tempo:3200/api/v1/push"
+#     headers:
+#       "X-Scope-OrgID": "team-learning"

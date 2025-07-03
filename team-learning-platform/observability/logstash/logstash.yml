@@ -1,0 +1,21 @@
+# Logstash 設定ファイル
+# ログデータの処理・変換・転送設定
+
+http.host: "0.0.0.0"
+xpack.monitoring.enabled: false
+xpack.monitoring.elasticsearch.hosts: ["http://elasticsearch:9200"]
+
+# パイプライン設定
+pipeline.id: team-learning-pipeline
+pipeline.workers: 2
+pipeline.batch.size: 1000
+pipeline.batch.delay: 50
+
+# デッドレターキュー設定
+dead_letter_queue.enable: true
+dead_letter_queue.max_bytes: 1gb
+
+# ログ設定
+log.level: info
+log.format: json
+path.logs: /var/log/logstash
