@@ -1,0 +1,96 @@
+# Grafana データソース設定
+# Prometheus, Tempo, Elasticsearch の自動プロビジョニング
+
+apiVersion: 1
+
+datasources:
+  # Prometheus - メトリクス
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+          url: http://tempo:3200
+      prometheusType: Prometheus
+      prometheusVersion: 2.51.0
+      timeInterval: 30s
+      queryTimeout: 60s
+      httpHeaderName1: 'X-Scope-OrgID'
+    secureJsonData:
+      httpHeaderValue1: 'team-learning'
+
+  # Tempo - 分散トレーシング
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    uid: tempo
+    editable: true
+    jsonData:
+      httpMethod: GET
+      serviceMap:
+        datasourceUid: prometheus
+      search:
+        hide: false
+      nodeGraph:
+        enabled: true
+      traceQuery:
+        timeShiftEnabled: true
+        spanStartTimeShift: 1h
+        spanEndTimeShift: 1h
+      tracesToLogs:
+        datasourceUid: elasticsearch
+        tags: ['job', 'instance', 'pod', 'namespace']
+        mappedTags: [{ key: 'service.name', value: 'service' }]
+        mapTagNamesEnabled: false
+        spanStartTimeShift: 1h
+        spanEndTimeShift: 1h
+        filterByTraceID: false
+        filterBySpanID: false
+      tracesToMetrics:
+        datasourceUid: prometheus
+        tags: [{ key: 'service.name', value: 'service' }, { key: 'job' }]
+        queries:
+          - name: 'Sample query'
+            query: 'sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m]))'
+      lokiSearch:
+        datasourceUid: elasticsearch
+
+  # Elasticsearch - ログ検索
+  - name: Elasticsearch
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: 'team-learning-logs-*'
+    uid: elasticsearch
+    editable: true
+    jsonData:
+      index: 'team-learning-logs-*'
+      timeField: '@timestamp'
+      esVersion: '8.12.0'
+      includeFrozen: false
+      logMessageField: 'message'
+      logLevelField: 'level'
+      maxConcurrentShardRequests: 5
+      interval: Daily
+      timeInterval: 10s
+      queryTimeout: 60s
+
+  # TestData - 開発・テスト用
+  - name: TestData
+    type: testdata
+    access: proxy
+    uid: testdata
+    editable: true
+    jsonData:
+      csvContent: |
+        time,series1,series2
+        2023-01-01 00:00:00,10,20
+        2023-01-01 01:00:00,15,25
+        2023-01-01 02:00:00,20,30

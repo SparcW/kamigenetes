@@ -1,0 +1,58 @@
+# Tempo 設定ファイル
+# 分散トレーシングバックエンド設定
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+
+# トレースデータの取り込み設定
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+# データ保存設定
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/traces
+    pool:
+      max_workers: 100
+      queue_depth: 10000
+
+# 問い合わせ設定
+querier:
+  frontend_worker:
+    frontend_address: localhost:9095
+
+# 圧縮設定
+compactor:
+  compaction:
+    compaction_window: 1h
+    max_compaction_objects: 1000000
+    block_retention: 24h
+    compacted_block_retention: 1h
+
+# メトリクス設定
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: team-learning-local
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+
+# ログ設定
+target: all
+
+# 使用量制限
+usage_report:
+  reporting_enabled: false

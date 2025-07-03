@@ -145,3 +145,8 @@ volumes:
 networks:
   team-learning-network:
     driver: bridge
+
+# オブザーバビリティスタックを含む設定
+# 使用方法:
+# 基本開発: docker-compose up
+# 観測機能付き: docker-compose --profile development -f docker-compose.yml -f docker-compose.observability.yml up

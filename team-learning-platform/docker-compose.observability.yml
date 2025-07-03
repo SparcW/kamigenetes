@@ -1,0 +1,210 @@
+# オブザーバビリティ Docker Compose 設定
+
+version: '3.8'
+
+services:
+  # === オブザーバビリティスタック ===
+  
+  # Grafana Tempo - 分散トレーシング
+  tempo:
+    image: grafana/tempo:2.8.1
+    container_name: team-learning-tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo.yaml
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+  # Prometheus - メトリクス収集
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: team-learning-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./observability/prometheus/rules:/etc/prometheus/rules
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+  # Grafana - ダッシュボード・可視化
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: team-learning-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3100:3000"
+    depends_on:
+      - prometheus
+      - tempo
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+  # Elasticsearch - ログ検索・保存
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: team-learning-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+  # Kibana - ログ分析・可視化
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    container_name: team-learning-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+  # Logstash - ログ変換・転送
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.12.0
+    container_name: team-learning-logstash
+    volumes:
+      - ./observability/logstash/pipeline:/usr/share/logstash/pipeline
+      - ./observability/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
+    ports:
+      - "5044:5044"   # Beats
+      - "5000:5000"   # TCP
+      - "9600:9600"   # Monitoring
+    depends_on:
+      - elasticsearch
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+  # OpenTelemetry Collector - 統合収集
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.95.0
+    container_name: team-learning-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus metrics
+    depends_on:
+      - tempo
+      - prometheus
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+  # Node Exporter - システムメトリクス
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: team-learning-node-exporter
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+  # Redis Exporter - Redis メトリクス
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.58.0
+    container_name: team-learning-redis-exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=team_learning_redis_pass
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+  # PostgreSQL Exporter - PostgreSQL メトリクス
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: team-learning-postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://team_learning_user:team_learning_pass@postgres:5432/team_learning?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+    networks:
+      - team-learning-network
+    profiles:
+      - observability
+      - development
+
+volumes:
+  # オブザーバビリティ用ボリューム
+  tempo_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+
+networks:
+  team-learning-network:
+    driver: bridge
