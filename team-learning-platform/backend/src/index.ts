@@ -18,7 +18,6 @@ import { notFoundHandler } from './middleware/notFoundHandler';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import teamRoutes from './routes/teams';
-import documentRoutes from './routes/documents';
 import progressRoutes from './routes/progress';
 import examRoutes from './routes/exams';
 import analyticsRoutes from './routes/analytics';
@@ -137,7 +136,6 @@ class App {
     this.app.use('/api/auth', authRoutes);
     this.app.use('/api/users', userRoutes);
     this.app.use('/api/teams', teamRoutes);
-    this.app.use('/api/documents', documentRoutes);
     this.app.use('/api/progress', progressRoutes);
     this.app.use('/api/exams', examRoutes);
     this.app.use('/api/analytics', analyticsRoutes);
