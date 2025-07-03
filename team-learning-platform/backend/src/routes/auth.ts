@@ -187,7 +187,7 @@ router.post('/register',
           email,
           passwordHash,
           displayName,
-          role: 'user'
+          role: 'USER'
         }
       });
 

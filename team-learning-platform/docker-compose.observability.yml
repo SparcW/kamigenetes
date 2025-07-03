@@ -40,6 +40,8 @@ services:
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - team-learning-network
     profiles:
@@ -116,6 +118,8 @@ services:
     ports:
       - "5044:5044"   # Beats
       - "5000:5000"   # TCP
+      - "5001:5001"   # HTTP (Winston)
+      - "8080:8080"   # HTTP Alternative
       - "9600:9600"   # Monitoring
     depends_on:
       - elasticsearch
@@ -161,38 +165,38 @@ services:
       - observability
       - development
 
-  # Redis Exporter - Redis メトリクス
-  redis-exporter:
-    image: oliver006/redis_exporter:v1.58.0
-    container_name: team-learning-redis-exporter
-    environment:
-      - REDIS_ADDR=redis:6379
-      - REDIS_PASSWORD=team_learning_redis_pass
-    ports:
-      - "9121:9121"
-    depends_on:
-      - redis
-    networks:
-      - team-learning-network
-    profiles:
-      - observability
-      - development
+  # Redis Exporter - Redis メトリクス (メインスタックと一緒に起動)
+  # redis-exporter:
+  #   image: oliver006/redis_exporter:v1.58.0
+  #   container_name: team-learning-redis-exporter
+  #   environment:
+  #     - REDIS_ADDR=redis:6379
+  #     - REDIS_PASSWORD=team_learning_redis_pass
+  #   ports:
+  #     - "9121:9121"
+  #   depends_on:
+  #     - redis
+  #   networks:
+  #     - team-learning-network
+  #   profiles:
+  #     - observability
+  #     - development
 
-  # PostgreSQL Exporter - PostgreSQL メトリクス
-  postgres-exporter:
-    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
-    container_name: team-learning-postgres-exporter
-    environment:
-      - DATA_SOURCE_NAME=postgresql://team_learning_user:team_learning_pass@postgres:5432/team_learning?sslmode=disable
-    ports:
-      - "9187:9187"
-    depends_on:
-      - postgres
-    networks:
-      - team-learning-network
-    profiles:
-      - observability
-      - development
+  # PostgreSQL Exporter - PostgreSQL メトリクス (メインスタックと一緒に起動)
+  # postgres-exporter:
+  #   image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+  #   container_name: team-learning-postgres-exporter
+  #   environment:
+  #     - DATA_SOURCE_NAME=postgresql://team_learning_user:team_learning_pass@postgres:5432/team_learning?sslmode=disable
+  #   ports:
+  #     - "9187:9187"
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - team-learning-network
+  #   profiles:
+  #     - observability
+  #     - development
 
 volumes:
   # オブザーバビリティ用ボリューム

@@ -162,7 +162,7 @@ export function configurePassport(prisma: PrismaClient) {
                 avatarUrl: profile.photos?.[0]?.value || null,
                 oauthProvider: 'google',
                 oauthId: profile.id,
-                role: 'user',
+                role: 'USER',
                 lastLoginAt: new Date()
               },
               include: {
@@ -273,7 +273,7 @@ export function configurePassport(prisma: PrismaClient) {
                 avatarUrl: profile.photos?.[0]?.value || null,
                 oauthProvider: 'github',
                 oauthId: profile.id,
-                role: 'user',
+                role: 'USER',
                 lastLoginAt: new Date()
               },
               include: {

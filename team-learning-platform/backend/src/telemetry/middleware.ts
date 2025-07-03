@@ -250,11 +250,8 @@ declare global {
     interface Request {
       traceId?: string;
       spanId?: string;
-      user?: {
-        id: string;
-        role: string;
-        email?: string;
-      };
+      prisma?: any;
+      redis?: any;
     }
   }
 }
