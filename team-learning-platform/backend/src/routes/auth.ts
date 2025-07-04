@@ -16,7 +16,7 @@ const mockUsers = [
     id: '1',
     username: 'admin',
     email: 'admin@example.com',
-    passwordHash: '$2b$10$example',
+    passwordHash: '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj1RK8qOxBa2', // 'admin123'
     displayName: 'Administrator',
     avatarUrl: null,
     role: 'ADMIN',
@@ -75,8 +75,8 @@ router.post('/login',
         });
       }
 
-      // パスワード検証（一時的にスキップ、本番では bcrypt.compare 使用）
-      const isValidPassword = password === 'admin'; // 簡易チェック
+      // パスワード検証
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
       if (!isValidPassword) {
         return res.status(401).json({
           success: false,
@@ -140,10 +140,8 @@ router.post('/register',
       .withMessage('有効なメールアドレスを入力してください')
       .normalizeEmail(),
     body('password')
-      .isLength({ min: 8 })
-      .withMessage('パスワードは8文字以上で入力してください')
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-      .withMessage('パスワードは大文字、小文字、数字を含む必要があります'),
+      .isLength({ min: 6 })
+      .withMessage('パスワードは6文字以上で入力してください'),
     body('displayName')
       .trim()
       .isLength({ min: 1, max: 100 })

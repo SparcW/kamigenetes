@@ -1,101 +1,79 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import AuthPage from './components/AuthPage';
 import ExamList from './components/ExamList';
 import ExamDetail from './components/ExamDetail';
+import ExamTaking from './components/ExamTaking';
+import ExamResult from './components/ExamResult';
 import './App.css';
 
-interface ApiStatus {
-  backend: 'connected' | 'disconnected' | 'loading';
-  database: 'connected' | 'disconnected' | 'loading'; 
-  redis: 'connected' | 'disconnected' | 'loading';
-}
-
 const App: React.FC = () => {
-  const [apiStatus, setApiStatus] = useState<ApiStatus>({
-    backend: 'loading',
-    database: 'loading',
-    redis: 'loading'
-  });
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
+  );
+};
 
-  useEffect(() => {
-    // バックエンドAPI接続テスト
-    const testBackendConnection = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/health');
-        if (response.ok) {
-          const data = await response.json();
-          setApiStatus(prev => ({ ...prev, backend: 'connected' }));
-          console.log('Backend API connected:', data);
-        } else {
-          setApiStatus(prev => ({ ...prev, backend: 'disconnected' }));
-        }
-      } catch (error) {
-        console.error('Backend API connection failed:', error);
-        setApiStatus(prev => ({ ...prev, backend: 'disconnected' }));
-      }
-    };
+const AppContent: React.FC = () => {
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
 
-    testBackendConnection();
-    
-    // 5秒ごとに接続テスト
-    const interval = setInterval(testBackendConnection, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  if (isLoading) {
+    return (
+      <div className="app-loading">
+        <div className="loading-spinner">⏳</div>
+        <p>認証状態を確認中...</p>
+      </div>
+    );
+  }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'connected': return '✅';
-      case 'disconnected': return '❌';
-      case 'loading': return '⏳';
-      default: return '❓';
-    }
-  };
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
 
   return (
-    <Router>
-      <div className="app">
-        <header className="app-header">
-          <div className="header-content">
-            <h1>
-              <Link to="/" className="logo-link">
-                🎓 チーム学習プラットフォーム
-              </Link>
-            </h1>
-            <nav className="main-nav">
-              <Link to="/" className="nav-link">ホーム</Link>
-              <Link to="/exams" className="nav-link">試験一覧</Link>
-              <div className="status-indicator">
-                <span className="status-item">
-                  {getStatusIcon(apiStatus.backend)} API
-                </span>
-              </div>
-            </nav>
-          </div>
-        </header>
+    <div className="app">
+      <header className="app-header">
+        <div className="header-content">
+          <h1>
+            <Link to="/" className="logo-link">
+              🎓 チーム学習プラットフォーム
+            </Link>
+          </h1>
+          <nav className="main-nav">
+            <Link to="/" className="nav-link">ホーム</Link>
+            <Link to="/exams" className="nav-link">試験一覧</Link>
+            <div className="user-info">
+              <span className="user-name">👤 {user?.displayName}</span>
+              <button 
+                onClick={logout}
+                className="logout-button"
+              >
+                ログアウト
+              </button>
+            </div>
+          </nav>
+        </div>
+      </header>
 
-        <main className="app-main">
-          <Routes>
-            <Route path="/" element={<HomePage apiStatus={apiStatus} />} />
-            <Route path="/exams" element={<ExamList />} />
-            <Route path="/exams/:examId" element={<ExamDetail />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+      <main className="app-main">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/exams" element={<ExamList />} />
+          <Route path="/exams/:examId" element={<ExamDetail />} />
+          <Route path="/exams/:examId/take" element={<ExamTaking />} />
+          <Route path="/exams/:examId/result" element={<ExamResult />} />
+        </Routes>
+      </main>
+    </div>
   );
 };
 
 // ホームページコンポーネント
-const HomePage: React.FC<{ apiStatus: ApiStatus }> = ({ apiStatus }) => {
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'connected': return '✅';
-      case 'disconnected': return '❌';
-      case 'loading': return '⏳';
-      default: return '❓';
-    }
-  };
-
+const HomePage: React.FC = () => {
   return (
     <div className="home-page">
       <div className="hero-section">
@@ -126,30 +104,13 @@ const HomePage: React.FC<{ apiStatus: ApiStatus }> = ({ apiStatus }) => {
         </div>
       </div>
 
-      <div className="status-section">
-        <h3>📊 システム状況</h3>
-        <div className="status-grid">
-          <div className="status-card">
-            <span className="status-icon">{getStatusIcon(apiStatus.backend)}</span>
-            <div className="status-info">
-              <h4>バックエンドAPI</h4>
-              <p>{apiStatus.backend}</p>
-            </div>
-          </div>
-          <div className="status-card">
-            <span className="status-icon">🗄️</span>
-            <div className="status-info">
-              <h4>データベース</h4>
-              <p>PostgreSQL</p>
-            </div>
-          </div>
-          <div className="status-card">
-            <span className="status-icon">🔴</span>
-            <div className="status-info">
-              <h4>キャッシュ</h4>
-              <p>Redis</p>
-            </div>
-          </div>
+      <div className="welcome-section">
+        <h3>🎯 学習を開始しましょう</h3>
+        <p>右上の「試験一覧」から、あなたのレベルに合った試験を選択してください。</p>
+        <div className="quick-actions">
+          <Link to="/exams" className="quick-action-button">
+            📝 試験一覧を見る
+          </Link>
         </div>
       </div>
     </div>
