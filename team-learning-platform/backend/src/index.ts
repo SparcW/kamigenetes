@@ -19,10 +19,10 @@ import { notFoundHandler } from './middleware/notFoundHandler';
 
 // ルート
 import authRoutes from './routes/auth';
+import examRoutes from './routes/exam';
 // import userRoutes from './routes/users';
 // import teamRoutes from './routes/teams';
 // import progressRoutes from './routes/progress';
-// import examRoutes from './routes/exams';
 // import analyticsRoutes from './routes/analytics';
 
 class App {
@@ -149,10 +149,10 @@ class App {
 
     // API ルート
     this.app.use('/api/auth', authRoutes);
+    this.app.use('/api/exams', examRoutes);
     // this.app.use('/api/users', userRoutes);
     // this.app.use('/api/teams', teamRoutes);
     // this.app.use('/api/progress', progressRoutes);
-    // this.app.use('/api/exams', examRoutes);
     // this.app.use('/api/analytics', analyticsRoutes);
 
     // API ルートのドキュメント

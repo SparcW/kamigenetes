@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import ExamList from './components/ExamList';
+import ExamDetail from './components/ExamDetail';
+import './App.css';
 
 interface ApiStatus {
   backend: 'connected' | 'disconnected' | 'loading';
@@ -48,63 +52,105 @@ const App: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>🎓 チーム学習プラットフォーム</h1>
-      <p>Kubernetes学習管理システムのフロントエンドが正常に起動しました。</p>
-      
-      <div style={{ marginTop: '20px' }}>
-        <h2>📊 システム状況</h2>
-        <ul style={{ fontSize: '16px', lineHeight: '1.6' }}>
-          <li>{getStatusIcon(apiStatus.backend)} フロントエンド (React + Vite) - 稼働中</li>
-          <li>{getStatusIcon(apiStatus.backend)} バックエンドAPI - {apiStatus.backend}</li>
-          <li>{getStatusIcon(apiStatus.database)} データベース (PostgreSQL) - {apiStatus.database}</li>
-          <li>{getStatusIcon(apiStatus.redis)} キャッシュ (Redis) - {apiStatus.redis}</li>
-        </ul>
+    <Router>
+      <div className="app">
+        <header className="app-header">
+          <div className="header-content">
+            <h1>
+              <Link to="/" className="logo-link">
+                🎓 チーム学習プラットフォーム
+              </Link>
+            </h1>
+            <nav className="main-nav">
+              <Link to="/" className="nav-link">ホーム</Link>
+              <Link to="/exams" className="nav-link">試験一覧</Link>
+              <div className="status-indicator">
+                <span className="status-item">
+                  {getStatusIcon(apiStatus.backend)} API
+                </span>
+              </div>
+            </nav>
+          </div>
+        </header>
+
+        <main className="app-main">
+          <Routes>
+            <Route path="/" element={<HomePage apiStatus={apiStatus} />} />
+            <Route path="/exams" element={<ExamList />} />
+            <Route path="/exams/:examId" element={<ExamDetail />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  );
+};
+
+// ホームページコンポーネント
+const HomePage: React.FC<{ apiStatus: ApiStatus }> = ({ apiStatus }) => {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'connected': return '✅';
+      case 'disconnected': return '❌';
+      case 'loading': return '⏳';
+      default: return '❓';
+    }
+  };
+
+  return (
+    <div className="home-page">
+      <div className="hero-section">
+        <h2>🚀 AWS ECS管理者向けKubernetes学習プラットフォーム</h2>
+        <p>段階的な学習プロセスで、AWS ECSからKubernetesへの移行をサポートします。</p>
+        <div className="hero-actions">
+          <Link to="/exams" className="cta-button">
+            試験を開始する
+          </Link>
+        </div>
       </div>
 
-      <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f0f8ff', borderRadius: '8px', border: '1px solid #0066cc' }}>
-        <h3>🔗 API接続テスト</h3>
-        <p><strong>バックエンドAPI:</strong> {apiStatus.backend === 'connected' ? '✅ 接続成功' : '❌ 接続失敗 - APIサーバーを確認してください'}</p>
-        {apiStatus.backend === 'connected' && (
-          <div style={{ marginTop: '10px' }}>
-            <button 
-              onClick={() => window.open('http://localhost:3001/api', '_blank')}
-              style={{ 
-                padding: '8px 16px', 
-                backgroundColor: '#0066cc', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              API情報を表示
-            </button>
+      <div className="features-section">
+        <h3>✨ 主な機能</h3>
+        <div className="features-grid">
+          <div className="feature-card">
+            <h4>🧪 習熟度テスト</h4>
+            <p>段階的な試験でKubernetesの理解度を確認</p>
           </div>
-        )}
+          <div className="feature-card">
+            <h4>📊 リアルタイム監視</h4>
+            <p>学習進捗と習熟度の可視化</p>
+          </div>
+          <div className="feature-card">
+            <h4>🔄 ECS比較</h4>
+            <p>AWS ECSとKubernetesの概念マッピング</p>
+          </div>
+        </div>
       </div>
-      
-      <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '5px' }}>
-        <strong>開発環境情報:</strong>
-        <br />
-        フロントエンド: http://localhost:3000
-        <br />
-        バックエンドAPI: http://localhost:3001
-        <br />
-        PostgreSQL: localhost:5432
-        <br />
-        Redis: localhost:6379
-        <br />
-        <br />
-        <strong>観測可能性スタック:</strong>
-        <br />
-        Prometheus: http://localhost:9090
-        <br />
-        Grafana: http://localhost:3100
-        <br />
-        Elasticsearch: http://localhost:9200
-        <br />
-        Kibana: http://localhost:5601
+
+      <div className="status-section">
+        <h3>📊 システム状況</h3>
+        <div className="status-grid">
+          <div className="status-card">
+            <span className="status-icon">{getStatusIcon(apiStatus.backend)}</span>
+            <div className="status-info">
+              <h4>バックエンドAPI</h4>
+              <p>{apiStatus.backend}</p>
+            </div>
+          </div>
+          <div className="status-card">
+            <span className="status-icon">🗄️</span>
+            <div className="status-info">
+              <h4>データベース</h4>
+              <p>PostgreSQL</p>
+            </div>
+          </div>
+          <div className="status-card">
+            <span className="status-icon">🔴</span>
+            <div className="status-info">
+              <h4>キャッシュ</h4>
+              <p>Redis</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
