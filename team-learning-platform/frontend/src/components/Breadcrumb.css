@@ -1,0 +1,136 @@
+/* ブレッドクラムナビゲーションのスタイル */
+.breadcrumb {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.breadcrumb-list {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.breadcrumb-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.breadcrumb-link {
+  color: #0056b3;
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.breadcrumb-link:hover {
+  background: #e3f2fd;
+  color: #003d82;
+  text-decoration: none;
+}
+
+.breadcrumb-text {
+  color: #495057;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+.breadcrumb-item.active .breadcrumb-text {
+  color: #212529;
+  font-weight: 600;
+}
+
+.breadcrumb-separator {
+  color: #6c757d;
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin: 0 0.25rem;
+  user-select: none;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .breadcrumb {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  .breadcrumb-link {
+    color: #63b3ed;
+  }
+  
+  .breadcrumb-link:hover {
+    background: #2a4365;
+    color: #90cdf4;
+  }
+  
+  .breadcrumb-text {
+    color: #a0aec0;
+  }
+  
+  .breadcrumb-item.active .breadcrumb-text {
+    color: #f7fafc;
+  }
+  
+  .breadcrumb-separator {
+    color: #718096;
+  }
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  .breadcrumb {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+  
+  .breadcrumb-list {
+    gap: 0.1rem;
+  }
+  
+  .breadcrumb-item {
+    gap: 0.25rem;
+  }
+  
+  .breadcrumb-icon {
+    font-size: 0.9rem;
+  }
+  
+  .breadcrumb-link,
+  .breadcrumb-text {
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .breadcrumb-separator {
+    margin: 0 0.15rem;
+    font-size: 1rem;
+  }
+}
+
+/* アクセシビリティ */
+.breadcrumb-link:focus {
+  outline: 2px solid #0056b3;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breadcrumb-link {
+    transition: none;
+  }
+}

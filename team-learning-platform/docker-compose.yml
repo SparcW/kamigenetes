@@ -75,6 +75,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - ../docs:/docs
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,7 +92,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: team-learning-frontend
     environment:
-      VITE_API_URL: http://localhost:3001/api
+      VITE_API_URL: http://localhost:3001
       VITE_GOOGLE_CLIENT_ID: your_google_client_id
       VITE_GITHUB_CLIENT_ID: your_github_client_id
       CHOKIDAR_USEPOLLING: "true"
