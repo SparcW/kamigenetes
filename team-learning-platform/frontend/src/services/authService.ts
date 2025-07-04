@@ -24,13 +24,13 @@ interface LoginRequest {
   password: string;
 }
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = 'http://localhost:3001/api';
 
 export const authService = {
   // ユーザー登録
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,7 +50,7 @@ export const authService = {
   // ログイン
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ export const authService = {
   // ログアウト
   async logout(): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -86,7 +86,7 @@ export const authService = {
   // 現在のユーザー情報取得
   async getCurrentUser(): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
         credentials: 'include',
       });
 

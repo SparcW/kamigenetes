@@ -32,13 +32,17 @@ const ExamList: React.FC<ExamListProps> = ({ className }) => {
       setLoading(true);
       setError(null);
       
+      console.log('Fetching exams with filters:', filters);
+      
       const filterParams = {
         category: filters.category || undefined,
         difficulty: filters.difficulty || undefined,
         tags: filters.tags ? filters.tags.split(',').map(tag => tag.trim()) : undefined
       };
 
+      console.log('Filter params:', filterParams);
       const response: ExamListResponse = await examService.getExams(filterParams);
+      console.log('Exams response:', response);
       
       if (response.success) {
         setExams(response.exams);
@@ -47,7 +51,25 @@ const ExamList: React.FC<ExamListProps> = ({ className }) => {
       }
     } catch (err) {
       console.error('試験一覧取得エラー:', err);
-      setError('試験一覧の取得に失敗しました');
+      
+      // 詳細なエラー情報を表示
+      if (err instanceof Error) {
+        console.error('エラーメッセージ:', err.message);
+        console.error('エラー名:', err.name);
+        console.error('エラースタック:', err.stack);
+        
+        // ApiErrorの場合は詳細情報を表示
+        if (err.name === 'ApiError') {
+          const apiError = err as any;
+          console.error('ステータスコード:', apiError.statusCode);
+          console.error('レスポンス:', apiError.response);
+          setError(`API呼び出しエラー (${apiError.statusCode}): ${apiError.response?.message || err.message}`);
+        } else {
+          setError(`試験一覧の取得に失敗しました: ${err.message}`);
+        }
+      } else {
+        setError(`試験一覧の取得に失敗しました: ${err}`);
+      }
     } finally {
       setLoading(false);
     }

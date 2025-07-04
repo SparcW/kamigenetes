@@ -8,7 +8,7 @@ import {
   ApiErrorResponse 
 } from '../types/exam';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001/api';
 
 // APIエラーハンドリング
 class ApiError extends Error {
@@ -69,17 +69,17 @@ export const examService = {
       query = params.toString() ? `?${params.toString()}` : '';
     }
     
-    return apiCall<ExamListResponse>(`/api/exams${query}`);
+    return apiCall<ExamListResponse>(`/exams${query}`);
   },
 
   // 試験詳細取得
   async getExamDetail(examId: string): Promise<ExamDetailResponse> {
-    return apiCall<ExamDetailResponse>(`/api/exams/${examId}`);
+    return apiCall<ExamDetailResponse>(`/exams/${examId}`);
   },
 
   // 試験開始
   async startExam(examId: string): Promise<ExamStartResponse> {
-    return apiCall<ExamStartResponse>(`/api/exams/${examId}/start`, {
+    return apiCall<ExamStartResponse>(`/exams/${examId}/start`, {
       method: 'POST'
     });
   },
@@ -90,7 +90,7 @@ export const examService = {
     sessionId: string, 
     answers: Record<string, string | string[]>
   ): Promise<ExamSubmitResponse> {
-    return apiCall<ExamSubmitResponse>(`/api/exams/${examId}/submit`, {
+    return apiCall<ExamSubmitResponse>(`/exams/${examId}/submit`, {
       method: 'POST',
       body: JSON.stringify({
         sessionId,
@@ -112,7 +112,7 @@ export const examService = {
       passed: boolean;
     }>;
   }> {
-    return apiCall(`/api/exams/${examId}/results`);
+    return apiCall(`/exams/${examId}/results`);
   }
 };
 
