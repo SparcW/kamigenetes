@@ -362,30 +362,71 @@
   text-align: center;
 }
 
+/* 学習のヒントセクション */
+.learning-guidance {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-top: 2rem;
+  border: 1px solid #e9ecef;
+}
+
+.learning-guidance h3 {
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
+}
+
+.learning-guidance h4 {
+  color: #495057;
+  margin: 1.5rem 0 1rem 0;
+  font-size: 1.1rem;
+}
+
 .recommendations {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 1rem;
 }
 
 .recommendation {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 15px;
-  background: #f8f9fa;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: white;
   border-radius: 8px;
-  border-left: 4px solid #28a745;
+  border-left: 4px solid #3498db;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .rec-icon {
   font-size: 1.2rem;
-  flex-shrink: 0;
+  min-width: 1.5rem;
+  text-align: center;
 }
 
-.recommendation span:last-child {
-  color: #495057;
-  line-height: 1.4;
+.weak-areas {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.weak-area-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.weak-area-tag {
+  background: #ffc107;
+  color: #212529;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
 }
 
 /* 印刷対応 */

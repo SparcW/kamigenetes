@@ -63,6 +63,41 @@ const ExamResult: React.FC = () => {
     return '今回は惜しくも不合格でした。復習して再チャレンジしてください。';
   };
 
+  const getNextStepRecommendations = (): string[] => {
+    if (result.passed) {
+      if (result.percentage >= 90) {
+        return [
+          '次のレベルの試験に挑戦してみましょう',
+          '実際のKubernetesクラスターで実践してみましょう',
+          '他のチームメンバーにアドバイスを共有してみましょう'
+        ];
+      }
+      return [
+        '間違えた問題を重点的に復習しましょう',
+        '関連するドキュメントを読み直してみましょう',
+        '次のレベルの試験に挑戦してみましょう'
+      ];
+    }
+    return [
+      '間違えた問題の解説をよく読んで理解を深めましょう',
+      'Kubernetesの公式ドキュメントで概念を復習しましょう',
+      '基礎的な演習から再度取り組んでみましょう',
+      '準備ができたら再度試験に挑戦しましょう'
+    ];
+  };
+
+  const getWeakAreas = (): string[] => {
+    const incorrectResults = result.results.filter(r => !r.isCorrect);
+    if (incorrectResults.length === 0) return [];
+    
+    // 簡易的な分析（実際はより詳細な分析が可能）
+    return [
+      'Pod の基本概念',
+      'Service の設定',
+      'Deployment の管理'
+    ].slice(0, Math.min(incorrectResults.length, 3));
+  };
+
   return (
     <div className="exam-result">
       <div className="result-header">
@@ -196,27 +231,29 @@ const ExamResult: React.FC = () => {
             </button>
           </div>
 
-          {result.passed && (
-            <div className="next-steps">
-              <h3>🎯 次のステップ</h3>
-              <div className="recommendations">
-                {exam.difficulty < 5 && (
-                  <div className="recommendation">
-                    <span className="rec-icon">⬆️</span>
-                    <span>より高難易度の試験にチャレンジしてみましょう</span>
-                  </div>
-                )}
-                <div className="recommendation">
-                  <span className="rec-icon">📖</span>
-                  <span>Kubernetesドキュメントで詳細な学習を続けましょう</span>
+          {/* 学習のヒントセクション */}
+          <div className="learning-guidance">
+            <h3>📚 学習のヒント</h3>
+            <div className="recommendations">
+              {getNextStepRecommendations().map((recommendation, index) => (
+                <div key={index} className="recommendation">
+                  <span className="rec-icon">✨</span>
+                  <span>{recommendation}</span>
                 </div>
-                <div className="recommendation">
-                  <span className="rec-icon">🛠️</span>
-                  <span>実際のクラスターで実践的な操作を試してみましょう</span>
+              ))}
+            </div>
+            
+            {!result.passed && getWeakAreas().length > 0 && (
+              <div className="weak-areas">
+                <h4>🎯 重点復習エリア</h4>
+                <div className="weak-area-tags">
+                  {getWeakAreas().map((area, index) => (
+                    <span key={index} className="weak-area-tag">{area}</span>
+                  ))}
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -113,9 +113,18 @@ const ExamTaking: React.FC = () => {
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // 進捗計算の改善
   const getProgress = (): number => {
     const answered = Object.keys(answers).length;
     return (answered / examState.exam.questions.length) * 100;
+  };
+
+  const getAnsweredQuestions = (): number => {
+    return Object.keys(answers).length;
+  };
+
+  const isQuestionAnswered = (questionId: string): boolean => {
+    return answers[questionId] !== undefined && answers[questionId] !== '';
   };
 
   const getTimeColor = (): string => {
@@ -123,6 +132,13 @@ const ExamTaking: React.FC = () => {
     if (percentage > 50) return 'time-normal';
     if (percentage > 20) return 'time-warning';
     return 'time-danger';
+  };
+
+  const getTimeStatusText = (): string => {
+    const percentage = (timeRemaining / (examState.exam.timeLimit * 60)) * 100;
+    if (percentage > 50) return '十分な時間があります';
+    if (percentage > 20) return '時間に注意してください';
+    return '時間が不足しています！';
   };
 
   if (!examState) {
@@ -148,6 +164,7 @@ const ExamTaking: React.FC = () => {
             <div className={`timer ${getTimeColor()}`}>
               <span className="timer-icon">⏰</span>
               <span className="timer-text">{formatTime(timeRemaining)}</span>
+              <span className="timer-status">{getTimeStatusText()}</span>
             </div>
             
             <div className="progress-container">
@@ -158,7 +175,7 @@ const ExamTaking: React.FC = () => {
                 ></div>
               </div>
               <span className="progress-text">
-                {Math.round(getProgress())}% 完了
+                回答済み: {getAnsweredQuestions()} / {examState.exam.questions.length}問
               </span>
             </div>
           </div>

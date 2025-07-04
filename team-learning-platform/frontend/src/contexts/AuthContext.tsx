@@ -55,10 +55,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       } else {
         setError(response.message || 'ログインに失敗しました');
+        // エラーメッセージを5秒後に自動クリア
+        setTimeout(() => setError(null), 5000);
         return false;
       }
     } catch (error) {
       setError('ログインに失敗しました');
+      setTimeout(() => setError(null), 5000);
       return false;
     } finally {
       setIsLoading(false);
@@ -76,10 +79,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       } else {
         setError(response.message || '登録に失敗しました');
+        // エラーメッセージを5秒後に自動クリア
+        setTimeout(() => setError(null), 5000);
         return false;
       }
     } catch (error) {
       setError('登録に失敗しました');
+      setTimeout(() => setError(null), 5000);
       return false;
     } finally {
       setIsLoading(false);
