@@ -2,10 +2,18 @@
 .breadcrumb {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
-  border-radius: 6px;
+  border-radius: 0; /* 角を丸くしない */
+  border-left: none;
+  border-right: none;
   padding: 0.75rem 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0; /* マージン削除 */
   font-size: 0.9rem;
+  position: fixed; /* 固定表示 */
+  top: 70px; /* ヘッダーの下 */
+  left: 280px; /* サイドバーの右 */
+  right: 0;
+  z-index: 999; /* サイドバーより下、メインコンテンツより上 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .breadcrumb-list {
@@ -120,6 +128,30 @@
   .breadcrumb-separator {
     margin: 0 0.15rem;
     font-size: 1rem;
+  }
+}
+
+/* モバイル表示での調整 */
+@media (max-width: 767px) {
+  .breadcrumb {
+    left: 0; /* サイドバーが隠れているのでfull width */
+    top: 70px;
+  }
+}
+
+/* タブレット表示での調整 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .breadcrumb {
+    left: 0; /* タブレットでもfull width */
+    top: 70px;
+  }
+}
+
+/* デスクトップ表示での調整 */
+@media (min-width: 1024px) {
+  .breadcrumb {
+    left: 280px; /* サイドバー幅分のマージン */
+    top: 70px;
   }
 }
 

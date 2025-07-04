@@ -1,22 +1,44 @@
 /* サイドバーナビゲーションのスタイル */
 .sidebar {
   position: fixed;
-  top: 0;
+  top: 120px; /* ヘッダー（70px）+ ブレッドクラム（50px）の高さ分下げる */
   left: 0;
-  height: 100vh;
-  width: 320px;
+  height: calc(100vh - 120px); /* ヘッダー＋ブレッドクラムの高さを除いた高さ */
+  width: 280px; /* 幅を少し狭く */
   background: #ffffff;
   border-right: 1px solid #e1e5e9;
-  transform: translateX(-100%);
+  transform: translateX(0); /* デフォルトで表示 */
   transition: transform 0.3s ease-in-out;
   z-index: 1000;
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  overflow-y: auto; /* スクロール可能にする */
 }
 
 .sidebar.open {
   transform: translateX(0);
+}
+
+.sidebar:not(.open) {
+  transform: translateX(-100%);
+}
+
+/* デスクトップでは常に表示 */
+@media (min-width: 768px) {
+  .sidebar {
+    transform: translateX(0) !important;
+    top: 120px; /* ヘッダー＋ブレッドクラムの高さ分下げる */
+    height: calc(100vh - 120px); /* ヘッダー＋ブレッドクラムの高さを除いた高さ */
+  }
+}
+
+/* モバイルでの調整 */
+@media (max-width: 767px) {
+  .sidebar {
+    top: 120px; /* ヘッダー＋ブレッドクラムの高さ分下げる */
+    height: calc(100vh - 120px); /* ヘッダー＋ブレッドクラムの高さを除いた高さ */
+  }
 }
 
 .sidebar-overlay {
@@ -41,7 +63,7 @@
 
 .sidebar-header h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.1rem; /* フォントサイズを小さく */
   color: #212529;
   font-weight: 600;
 }
@@ -154,7 +176,11 @@
 .category-name {
   flex: 1;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.8rem; /* フォントサイズを小さく */
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .expand-icon {
@@ -183,13 +209,14 @@
 .document-link {
   display: flex;
   align-items: center;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem; /* パディングを調整 */
   color: #495057;
   text-decoration: none;
   border-radius: 4px;
   transition: all 0.2s ease;
-  font-size: 0.85rem;
-  margin-left: 1rem;
+  font-size: 0.75rem; /* フォントサイズを小さく */
+  margin-left: 0.8rem;
+  line-height: 1.3;
 }
 
 .document-link:hover {
@@ -219,6 +246,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.75rem; /* フォントサイズを小さく */
 }
 
 /* フッター */
@@ -247,12 +275,12 @@
 /* デスクトップ用のレイアウト調整 */
 @media (min-width: 1024px) {
   .sidebar {
-    position: relative;
+    position: fixed; /* fixedのまま */
+    top: 120px; /* ヘッダー＋ブレッドクラムの高さ分下げる */
     transform: translateX(0);
     width: 280px;
-    height: auto;
-    min-height: calc(100vh - 60px);
-    box-shadow: none;
+    height: calc(100vh - 120px); /* ヘッダー＋ブレッドクラムの高さを除いた高さ */
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
     border-right: 1px solid #e1e5e9;
   }
   
@@ -270,6 +298,8 @@
   .sidebar {
     background: #1a202c;
     border-right-color: #2d3748;
+    top: 120px; /* ヘッダー＋ブレッドクラムの高さ分下げる */
+    height: calc(100vh - 120px); /* ヘッダー＋ブレッドクラムの高さを除いた高さ */
   }
   
   .sidebar-header {

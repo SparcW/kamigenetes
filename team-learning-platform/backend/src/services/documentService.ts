@@ -27,6 +27,9 @@ export class DocumentService {
       const entries = await readdir(this.docsPath, { withFileTypes: true });
       const categories: DocumentCategory[] = [];
 
+      // README.mdの見出し順序に基づいた並び順を定義
+      const categoryOrder = ['concepts', 'tutorials', 'tasks', 'setup', 'reference'];
+
       for (const entry of entries) {
         if (entry.isDirectory()) {
           const categoryPath = path.join(this.docsPath, entry.name);
@@ -42,7 +45,18 @@ export class DocumentService {
         }
       }
 
-      return categories;
+      // README.mdの見出し順序でソート
+      return categories.sort((a, b) => {
+        const aIndex = categoryOrder.indexOf(a.id);
+        const bIndex = categoryOrder.indexOf(b.id);
+        
+        // 定義されていないカテゴリは最後に配置
+        if (aIndex === -1 && bIndex === -1) return a.id.localeCompare(b.id);
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        
+        return aIndex - bIndex;
+      });
     } catch (error) {
       console.error('ドキュメントカテゴリの取得に失敗しました:', error);
       throw new Error('ドキュメントカテゴリの取得に失敗しました');
@@ -74,7 +88,8 @@ export class DocumentService {
         }
       }
 
-      return files.sort((a, b) => a.name.localeCompare(b.name));
+      // カテゴリごとの推奨順序でソート
+      return this.sortFilesByCategory(files, categoryId);
     } catch (error) {
       console.error(`カテゴリ ${categoryId} のファイル取得に失敗しました:`, error);
       throw new Error(`カテゴリ ${categoryId} のファイル取得に失敗しました`);
@@ -322,6 +337,78 @@ export class DocumentService {
     const end = Math.min(content.length, index + query.length + 50);
     
     return content.substring(start, end).trim();
+  }
+
+  /**
+   * カテゴリごとのファイル順序でソート
+   */
+  private sortFilesByCategory(files: DocumentFile[], categoryId: string): DocumentFile[] {
+    // カテゴリごとの推奨ファイル順序を定義
+    const fileOrders: Record<string, string[]> = {
+      'concepts': [
+        'README.md',
+        'overview.md',
+        'cluster-architecture.md', 
+        'workloads.md',
+        'configuration.md',
+        'security.md',
+        'storage.md',
+        'networking.md',
+        'observability.md',
+        'scaling-automation.md'
+      ],
+      'tutorials': [
+        'README.md',
+        'hello-kubernetes.md',
+        'kubernetes-basics.md',
+        'stateless-application.md',
+        'stateful-application.md',
+        'service-connection.md',
+        'configuration.md',
+        'security.md'
+      ],
+      'tasks': [
+        'README.md',
+        'install-tools.md',
+        'administer-cluster.md',
+        'configure-pod-container.md',
+        'monitoring-logging.md',
+        'manage-objects.md',
+        'manage-secrets.md',
+        'run-applications.md',
+        'networking.md'
+      ],
+      'setup': [
+        'README.md',
+        'learning-environment.md',
+        'production-environment.md',
+        'tool-configuration.md',
+        'security-configuration.md'
+      ],
+      'reference': [
+        'README.md',
+        'config-files.md',
+        'glossary.md'
+      ]
+    };
+
+    const order = fileOrders[categoryId];
+    if (!order) {
+      // 順序が定義されていない場合はアルファベット順
+      return files.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return files.sort((a, b) => {
+      const aIndex = order.indexOf(a.name);
+      const bIndex = order.indexOf(b.name);
+      
+      // 定義されていないファイルは最後に配置
+      if (aIndex === -1 && bIndex === -1) return a.name.localeCompare(b.name);
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      
+      return aIndex - bIndex;
+    });
   }
 }
 

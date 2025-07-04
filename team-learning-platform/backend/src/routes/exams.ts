@@ -451,13 +451,13 @@ router.put('/:id/attempts/:attemptId/submit', requireAuth, [
       const userAnswer = answers[question.id];
       let score = 0;
 
-      if (question.questionType === 'multiple_choice') {
+      if (question.questionType === 'MULTIPLE_CHOICE') {
         // 選択式問題の採点
         const correctAnswer = question.expectedAnswer;
         if (userAnswer === correctAnswer) {
           score = question.points;
         }
-      } else if (question.questionType === 'yaml_generation') {
+      } else if (question.questionType === 'YAML_GENERATION') {
         // YAML記述問題の採点（簡易版）
         if (userAnswer && typeof userAnswer === 'string') {
           // 基本的なYAMLキーワードの存在チェック
@@ -467,7 +467,7 @@ router.put('/:id/attempts/:attemptId/submit', requireAuth, [
           );
           score = (foundKeywords.length / requiredKeywords.length) * question.points;
         }
-      } else if (question.questionType === 'kubectl_command') {
+      } else if (question.questionType === 'KUBECTL_COMMAND') {
         // kubectl実技問題の採点
         if (kubectlLogs && kubectlLogs.includes('successfully')) {
           score = question.points;
@@ -478,7 +478,7 @@ router.put('/:id/attempts/:attemptId/submit', requireAuth, [
       totalScore += score;
     }
 
-    const scorePercentage = (totalScore / attempt.totalPoints) * 100;
+    const scorePercentage = (totalScore / (attempt.totalPoints || 1)) * 100;
 
     // 受験記録更新
     const updatedAttempt = await prisma.examAttempt.update({
@@ -501,7 +501,7 @@ router.put('/:id/attempts/:attemptId/submit', requireAuth, [
         score: scorePercentage,
         totalPoints: attempt.totalPoints,
         earned: totalScore,
-        passed: scorePercentage >= attempt.exam.passingScore,
+        passed: scorePercentage >= (attempt.exam.passingScore?.toNumber() || 0),
         passingScore: attempt.exam.passingScore,
         timeTaken: updatedAttempt.timeTaken,
         questionScores: questionScores,
@@ -562,7 +562,11 @@ router.get('/proficiency', requireAuth, async (req: Request, res: Response) => {
         conceptScore: pl.conceptScore,
         practicalScore: pl.practicalScore,
         yamlScore: pl.yamlScore,
-        overallScore: calculateOverallScore(pl.conceptScore, pl.practicalScore, pl.yamlScore),
+        overallScore: calculateOverallScore(
+          pl.conceptScore?.toNumber() || 0, 
+          pl.practicalScore?.toNumber() || 0, 
+          pl.yamlScore?.toNumber() || 0
+        ),
         lastUpdated: pl.lastUpdated
       }))
     });

@@ -16,7 +16,7 @@ export const DocsLayout: React.FC<DocsLayoutProps> = ({
   showSidebar = true,
   className = '' 
 }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // デフォルトで開く
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);

@@ -45,6 +45,7 @@ const initializeMermaid = () => {
       },
     });
     mermaidInitialized = true;
+    console.log('Mermaid initialized successfully');
   }
 };
 
@@ -75,12 +76,24 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({
 
           console.log('Rendering Mermaid chart:', chart);
           
-          // Mermaid図表をレンダリング
-          const { svg } = await mermaid.render(id, chart);
-          
-          if (ref.current) {
-            ref.current.innerHTML = svg;
-            console.log('Mermaid chart rendered successfully');
+          // より確実なレンダリング方法
+          try {
+            // mermaid.parse でまず構文チェック
+            const parseResult = await mermaid.parse(chart);
+            console.log('Parse result:', parseResult);
+            
+            // レンダリング実行
+            const { svg } = await mermaid.render(id, chart);
+            
+            if (ref.current) {
+              ref.current.innerHTML = svg;
+              console.log('Mermaid chart rendered successfully');
+            }
+          } catch (renderError) {
+            console.error('Mermaid render error:', renderError);
+            // フォールバック：直接的な方法を試す
+            ref.current.innerHTML = `<div class="mermaid">${chart}</div>`;
+            await mermaid.run();
           }
         }
       } catch (error) {
@@ -108,6 +121,15 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({
                   overflow-x: auto;
                   font-size: 12px;
                 ">${error instanceof Error ? error.message : 'Unknown error'}</pre>
+                <pre style="
+                  background-color: #f8f9fa;
+                  border: 1px solid #dee2e6;
+                  border-radius: 3px;
+                  padding: 8px;
+                  margin-top: 8px;
+                  overflow-x: auto;
+                  font-size: 12px;
+                ">Chart content: ${chart}</pre>
               </details>
             </div>
           `;

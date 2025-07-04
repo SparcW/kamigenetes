@@ -28,6 +28,12 @@ body {
   color: white;
   padding: 1rem 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: fixed; /* 固定表示 */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001; /* サイドバーより上に表示 */
+  height: 70px; /* ヘッダーの高さを明示的に設定 */
 }
 
 .header-content {
@@ -89,6 +95,7 @@ body {
 .app-main {
   flex: 1;
   padding: 2rem 0;
+  margin-top: 70px; /* 固定ヘッダーの高さ分のマージン（ブレッドクラムは個別に配置） */
 }
 
 /* ホームページ */

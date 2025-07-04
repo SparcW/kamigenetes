@@ -1,8 +1,9 @@
 /* ドキュメントレイアウトのスタイル */
 .docs-layout {
   display: flex;
-  min-height: 100vh;
+  min-height: calc(100vh - 120px); /* ヘッダー＋ブレッドクラムの高さを除いた高さ */
   background: #f8f9fa;
+  margin-top: 120px; /* ヘッダー＋ブレッドクラムの高さ分のマージン */
 }
 
 .docs-main {
@@ -10,10 +11,11 @@
   display: flex;
   flex-direction: column;
   transition: margin-left 0.3s ease;
+  margin-left: 280px; /* サイドバーの幅分のマージンを常に設定 */
 }
 
 .docs-main.with-sidebar {
-  margin-left: 0;
+  margin-left: 280px; /* サイドバーの幅分のマージン */
 }
 
 .docs-main.full-width {
@@ -24,7 +26,7 @@
 /* サイドバートグルボタン（モバイル用） */
 .sidebar-toggle {
   position: fixed;
-  top: 1rem;
+  top: calc(120px + 1rem); /* ヘッダー＋ブレッドクラムの高さ + 1rem */
   left: 1rem;
   z-index: 1001;
   background: #0056b3;
@@ -36,6 +38,7 @@
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.2s ease;
+  display: none; /* デフォルトで非表示 */
 }
 
 .sidebar-toggle:hover {
@@ -45,6 +48,21 @@
 
 .sidebar-toggle:active {
   transform: scale(0.95);
+}
+
+/* モバイルでのみ表示 */
+@media (max-width: 767px) {
+  .sidebar-toggle {
+    display: block;
+  }
+  
+  .docs-main {
+    margin-left: 0 !important;
+  }
+  
+  .docs-layout {
+    margin-top: 70px; /* ヘッダーの高さ分のマージン */
+  }
 }
 
 /* メインコンテンツ */

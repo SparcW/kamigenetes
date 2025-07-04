@@ -1,10 +1,10 @@
 // 基本的なOpenTelemetryテストサーバー
 // 依存関係の動作確認用
 
-import './telemetry/otel';
+// import './telemetry/otel';
 import express from 'express';
-import { tracingMiddleware, metricsEndpoint, healthCheck } from './telemetry/middleware';
-import { customMetrics, structuredLogger } from './telemetry/metrics';
+// import { tracingMiddleware, metricsEndpoint, healthCheck } from './telemetry/middleware';
+// import { customMetrics, structuredLogger } from './telemetry/metrics';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
