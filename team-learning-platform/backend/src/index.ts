@@ -1,5 +1,5 @@
 // OpenTelemetry初期化（最初にインポート）
-import './telemetry/otel';
+// import './telemetry/otel';
 
 import express from 'express';
 import cors from 'cors';
