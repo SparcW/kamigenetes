@@ -82,7 +82,7 @@ services:
         condition: service_healthy
     networks:
       - team-learning-network
-    command: npm run dev
+    command: ["npm", "run", "dev"]
 
   # フロントエンド React アプリ
   frontend:

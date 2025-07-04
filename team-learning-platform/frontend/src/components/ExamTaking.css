@@ -1,0 +1,519 @@
+/* 試験受験画面のスタイル */
+
+.exam-taking {
+  min-height: 100vh;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ヘッダー */
+.exam-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.exam-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.exam-title h1 {
+  font-size: 1.5rem;
+  margin-bottom: 5px;
+}
+
+.question-counter {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.exam-controls {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+/* タイマー */
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  min-width: 180px;
+}
+
+.timer.time-normal {
+  background: rgba(40, 167, 69, 0.2);
+  border: 2px solid #28a745;
+}
+
+.timer.time-warning {
+  background: rgba(255, 193, 7, 0.2);
+  border: 2px solid #ffc107;
+}
+
+.timer.time-danger {
+  background: rgba(220, 53, 69, 0.2);
+  border: 2px solid #dc3545;
+  animation: pulse 1s infinite;
+}
+
+.timer-icon {
+  font-size: 1.2rem;
+}
+
+.timer-text {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.timer-status {
+  font-size: 0.7rem;
+  opacity: 0.9;
+  text-align: center;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* 進捗バー */
+.progress-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-bar {
+  width: 200px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #28a745, #20c997);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.progress-text {
+  font-size: 0.8rem;
+  opacity: 0.9;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* メインコンテンツ */
+.exam-content {
+  flex: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  gap: 30px;
+}
+
+/* 問題コンテナ */
+.question-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.question-header {
+  padding: 20px 30px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.question-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.question-type {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.question-points {
+  background: #e8f5e8;
+  color: #2e7d32;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.question-content {
+  padding: 30px;
+}
+
+.question-text {
+  color: #2c3e50;
+  font-size: 1.3rem;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+/* 回答セクション */
+.answer-section {
+  margin-bottom: 30px;
+}
+
+.instruction {
+  background: #fff3cd;
+  color: #856404;
+  padding: 10px 15px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+  border-left: 4px solid #ffc107;
+}
+
+/* 選択問題 */
+.multiple-choice-input .options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  border: 2px solid transparent;
+}
+
+.option-item:hover {
+  background: #e9ecef;
+}
+
+.option-item input[type="radio"],
+.option-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.option-item input:checked + .option-text {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.option-item:has(input:checked) {
+  background: #e3f2fd;
+  border-color: #1976d2;
+}
+
+.option-text {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+/* テキスト入力 */
+.text-input {
+  width: 100%;
+}
+
+.answer-textarea {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.answer-textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.answer-textarea.yaml_generation {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background: #f8f9fa;
+}
+
+.answer-textarea.kubectl_command {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background: #2d3748;
+  color: #e2e8f0;
+  border-color: #4a5568;
+}
+
+.answer-textarea.kubectl_command:focus {
+  border-color: #63b3ed;
+}
+
+/* ナビゲーション */
+.question-navigation {
+  padding: 20px 30px;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+.nav-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.nav-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.prev-button {
+  background: #6c757d;
+  color: white;
+}
+
+.prev-button:hover:not(:disabled) {
+  background: #5a6268;
+}
+
+.next-button {
+  background: #007bff;
+  color: white;
+}
+
+.next-button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.submit-button {
+  background: #28a745;
+  color: white;
+}
+
+.submit-button:hover:not(:disabled) {
+  background: #218838;
+}
+
+.nav-button:disabled {
+  background: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* 問題一覧 */
+.question-overview {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  position: sticky;
+  top: 120px;
+}
+
+.question-overview h3 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+}
+
+.question-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.question-item {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #e9ecef;
+  background: white;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.question-item:hover {
+  border-color: #007bff;
+  background: #f8f9fa;
+}
+
+.question-item.current {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.question-item.answered {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.question-item.answered.current {
+  background: #007bff;
+  border-color: #007bff;
+}
+
+.question-item.unanswered {
+  background: white;
+  color: #6c757d;
+  border-color: #e9ecef;
+}
+
+/* モーダル */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+}
+
+.modal-content h3 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-size: 1.3rem;
+}
+
+.modal-content p {
+  color: #6c757d;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+  justify-content: flex-end;
+}
+
+.cancel-button {
+  padding: 10px 20px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.cancel-button:hover {
+  background: #5a6268;
+}
+
+.confirm-button {
+  padding: 10px 20px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.confirm-button:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.confirm-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .exam-header-content {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .exam-controls {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .exam-content {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 20px 15px;
+  }
+  
+  .question-content {
+    padding: 20px;
+  }
+  
+  .question-text {
+    font-size: 1.1rem;
+  }
+  
+  .nav-buttons {
+    flex-direction: column;
+  }
+  
+  .nav-button {
+    width: 100%;
+  }
+  
+  .question-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .progress-bar {
+    width: 100px;
+  }
+}

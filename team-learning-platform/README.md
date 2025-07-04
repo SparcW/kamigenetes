@@ -392,6 +392,113 @@ GET /api/analytics/user/{userId}
 - [ ] セキュリティテスト
 - [ ] ドキュメント整備
 
+## 🚀 サービス起動・停止手順
+
+### (1) フロント・バックエンド・データストア起動
+
+基本サービス（フロントエンド、バックエンド、PostgreSQL、Redis）を起動：
+
+```bash
+docker-compose up -d
+```
+
+### (2) 観測可能性スタック起動
+
+各サービスを個別に起動する場合：
+
+```bash
+# Elasticsearch
+docker-compose -f docker-compose.observability.yml up elasticsearch -d
+
+# Kibana
+docker-compose -f docker-compose.observability.yml up kibana -d
+
+# Prometheus
+docker-compose -f docker-compose.observability.yml up prometheus -d
+
+# Grafana
+docker-compose -f docker-compose.observability.yml up grafana -d
+
+# Tempo (トレーシング)
+docker-compose -f docker-compose.observability.yml up tempo -d
+
+# OpenTelemetry Collector
+docker-compose -f docker-compose.observability.yml up otel-collector -d
+
+# Filebeat (ログ転送)
+docker-compose -f docker-compose.observability.yml up filebeat -d
+```
+
+または、一括起動：
+
+```bash
+docker-compose -f docker-compose.observability.yml up -d
+```
+
+### (3) バックエンド導通テスト
+
+APIサーバーが正常に動作していることを確認：
+
+```bash
+curl http://localhost:3001/api
+```
+
+**期待される応答**: HTTP 200 OK + API情報のJSON
+
+### (4) フロントエンド導通テスト
+
+フロントエンドサーバーが正常に動作していることを確認：
+
+```bash
+curl -s -I http://localhost:3000
+```
+
+**期待される応答**: HTTP 200 OK
+
+### (5) ブラウザアクセス
+
+ブラウザで以下のURLにアクセス：
+
+- **フロントエンド**: http://localhost:3000
+- **バックエンドAPI**: http://localhost:3001/api
+- **ドキュメント**: http://localhost:3002
+- **Grafana**: http://localhost:3100 (admin/admin)
+- **Kibana**: http://localhost:5601
+- **Prometheus**: http://localhost:9090
+
+ログイン画面でプラットフォームにアクセスできることを確認。
+
+### サービス停止
+
+```bash
+# 基本サービス停止
+docker-compose down
+
+# 観測可能性スタック停止
+docker-compose -f docker-compose.observability.yml down
+
+# 全コンテナ停止（データ保持）
+docker-compose down && docker-compose -f docker-compose.observability.yml down
+
+# 全コンテナ・ボリューム削除（完全クリーンアップ）
+docker-compose down -v && docker-compose -f docker-compose.observability.yml down -v
+```
+
+### ヘルスチェック
+
+全サービスの状態確認：
+
+```bash
+# 基本サービス状態
+docker-compose ps
+
+# 観測可能性スタック状態
+docker-compose -f docker-compose.observability.yml ps
+
+# 全コンテナ状態
+docker ps --filter "name=team-learning"
+```
+
 ---
 
 **📅 更新日**: 2025年7月3日 | **👥 対象**: Kubernetes学習チーム | **🎯 目標**: チーム学習効率化

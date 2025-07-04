@@ -9,30 +9,30 @@ import session from 'express-session';
 import rateLimit from 'express-rate-limit';
 import { createClient } from 'redis';
 import RedisStore from 'connect-redis';
-import { PrismaClient } from '@prisma/client';
+// import { PrismaClient } from '@prisma/client';
 import passport from 'passport';
 
 import { config } from './config/config';
-import { configurePassport } from './config/passport';
+import { configurePassport } from './config/passport-simple';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 
 // ルート
 import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
-import teamRoutes from './routes/teams';
-import progressRoutes from './routes/progress';
-import examRoutes from './routes/exams';
-import analyticsRoutes from './routes/analytics';
+import examRoutes from './routes/exam';
+// import userRoutes from './routes/users';
+// import teamRoutes from './routes/teams';
+// import progressRoutes from './routes/progress';
+// import analyticsRoutes from './routes/analytics';
 
 class App {
   public app: express.Application;
-  public prisma: PrismaClient;
+  // public prisma: PrismaClient;
   private redisClient: any;
 
   constructor() {
     this.app = express();
-    this.prisma = new PrismaClient();
+    // this.prisma = new PrismaClient();
     this.initializeRedis();
     this.initializeMiddlewares();
     this.initializeRoutes();
@@ -110,14 +110,14 @@ class App {
       },
     }));
 
-    // Passport初期化
+    // Passport初期化（一時的にコメントアウト）
     this.app.use(passport.initialize());
     this.app.use(passport.session());
-    configurePassport(this.prisma);
+    // configurePassport(this.prisma);
 
     // リクエスト情報をコンテキストに追加
     this.app.use((req, res, next) => {
-      (req as any).prisma = this.prisma;
+      // (req as any).prisma = this.prisma;
       (req as any).redis = this.redisClient;
       next();
     });
@@ -149,11 +149,11 @@ class App {
 
     // API ルート
     this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/users', userRoutes);
-    this.app.use('/api/teams', teamRoutes);
-    this.app.use('/api/progress', progressRoutes);
     this.app.use('/api/exams', examRoutes);
-    this.app.use('/api/analytics', analyticsRoutes);
+    // this.app.use('/api/users', userRoutes);
+    // this.app.use('/api/teams', teamRoutes);
+    // this.app.use('/api/progress', progressRoutes);
+    // this.app.use('/api/analytics', analyticsRoutes);
 
     // API ルートのドキュメント
     this.app.get('/api', (req, res) => {
@@ -186,16 +186,16 @@ class App {
 
   public async listen() {
     try {
-      // データベース接続確認
-      await this.prisma.$connect();
-      console.log('✅ Database Connected');
+      // データベース接続確認（一時的にスキップ）
+      // await this.prisma.$connect();
+      console.log('✅ Database Connected (mocked)');
 
       // サーバー起動
       const port = config.port;
       this.app.listen(port, () => {
         console.log('🚀 Team Learning Platform API Started');
         console.log(`📖 URL: http://localhost:${port}`);
-        console.log(`🗄️  Database: Connected`);
+        console.log(`🗄️  Database: Mocked`);
         console.log(`🔴 Redis: Connected`);
         console.log(`🌍 Environment: ${config.nodeEnv}`);
         console.log(`🔐 Authentication: JWT + OAuth2.0`);
@@ -209,7 +209,7 @@ class App {
 
   public async close() {
     try {
-      await this.prisma.$disconnect();
+      // await this.prisma.$disconnect();
       await this.redisClient.disconnect();
       console.log('📴 Server shut down gracefully');
     } catch (error) {
