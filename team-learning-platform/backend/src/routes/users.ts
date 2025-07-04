@@ -180,7 +180,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
         })),
         stats: {
           totalDocuments: user.readingProgress.length,
-          completedDocuments: user.readingProgress.filter(p => p.progressPercentage === 100).length,
+          completedDocuments: user.readingProgress.filter(p => p.progressPercentage.toNumber() === 100).length,
           averageProficiency: user.proficiencyLevels.length > 0 
             ? user.proficiencyLevels.reduce((sum, p) => sum + p.level, 0) / user.proficiencyLevels.length 
             : 0,

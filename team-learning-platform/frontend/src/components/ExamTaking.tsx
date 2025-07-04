@@ -123,10 +123,6 @@ const ExamTaking: React.FC = () => {
     return Object.keys(answers).length;
   };
 
-  const isQuestionAnswered = (questionId: string): boolean => {
-    return answers[questionId] !== undefined && answers[questionId] !== '';
-  };
-
   const getTimeColor = (): string => {
     const percentage = (timeRemaining / (examState.exam.timeLimit * 60)) * 100;
     if (percentage > 50) return 'time-normal';

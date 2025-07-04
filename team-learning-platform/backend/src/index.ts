@@ -1,5 +1,5 @@
 // OpenTelemetry初期化（最初にインポート）
-import './telemetry/otel';
+// import './telemetry/otel';
 
 import express from 'express';
 import cors from 'cors';
@@ -20,6 +20,7 @@ import { notFoundHandler } from './middleware/notFoundHandler';
 // ルート
 import authRoutes from './routes/auth';
 import examRoutes from './routes/exam';
+import documentRoutes from './routes/documents';
 // import userRoutes from './routes/users';
 // import teamRoutes from './routes/teams';
 // import progressRoutes from './routes/progress';
@@ -150,6 +151,7 @@ class App {
     // API ルート
     this.app.use('/api/auth', authRoutes);
     this.app.use('/api/exams', examRoutes);
+    this.app.use('/api/documents', documentRoutes);
     // this.app.use('/api/users', userRoutes);
     // this.app.use('/api/teams', teamRoutes);
     // this.app.use('/api/progress', progressRoutes);

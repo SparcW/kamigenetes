@@ -181,7 +181,7 @@ router.get('/leaderboard/global', requireAuth, async (req: Request, res: Respons
           : 0;
 
         const avgExamScore = user.examAttempts.length > 0 
-          ? user.examAttempts.reduce((sum, a) => sum + a.score.toNumber(), 0) / user.examAttempts.length
+          ? user.examAttempts.reduce((sum, a) => sum + (a.score?.toNumber() || 0), 0) / user.examAttempts.length
           : 0;
 
         // 総合スコア計算 (進捗40% + 習熟度40% + 試験20%)
@@ -284,7 +284,7 @@ router.get('/leaderboard/team/:teamId', requireAuth, async (req: Request, res: R
           : 0;
 
         const avgExamScore = user.examAttempts.length > 0 
-          ? user.examAttempts.reduce((sum, a) => sum + a.score.toNumber(), 0) / user.examAttempts.length
+          ? user.examAttempts.reduce((sum, a) => sum + (a.score?.toNumber() || 0), 0) / user.examAttempts.length
           : 0;
 
         const overallScore = (avgProgress * 0.4) + (avgProficiency * 20 * 0.4) + (avgExamScore * 0.2);
@@ -438,7 +438,7 @@ router.get('/user/:userId', requireAuth, async (req: Request, res: Response) => 
       : 0;
 
     const avgExamScore = user.examAttempts.length > 0 
-      ? user.examAttempts.reduce((sum, a) => sum + a.score.toNumber(), 0) / user.examAttempts.length
+      ? user.examAttempts.reduce((sum, a) => sum + (a.score?.toNumber() || 0), 0) / user.examAttempts.length
       : 0;
 
     // カテゴリ別統計
@@ -516,9 +516,9 @@ router.get('/user/:userId', requireAuth, async (req: Request, res: Response) => 
             level5: user.proficiencyLevels.filter(p => p.level === 5).length,
           },
           examStats: {
-            concept: user.examAttempts.filter(a => a.exam.examType === 'concept').length,
-            yaml: user.examAttempts.filter(a => a.exam.examType === 'yaml').length,
-            practical: user.examAttempts.filter(a => a.exam.examType === 'practical').length,
+            concept: user.examAttempts.filter(a => a.exam.examType === 'CONCEPT').length,
+            yaml: user.examAttempts.filter(a => a.exam.examType === 'YAML').length,
+            practical: user.examAttempts.filter(a => a.exam.examType === 'PRACTICAL').length,
           }
         },
         recentActivity: recentActivity.map(activity => ({
@@ -601,7 +601,7 @@ router.get('/team/:teamId', requireAuth, async (req: Request, res: Response) => 
       : 0;
 
     const avgTeamExamScore = allExamAttempts.length > 0 
-      ? allExamAttempts.reduce((sum, a) => sum + a.score.toNumber(), 0) / allExamAttempts.length
+      ? allExamAttempts.reduce((sum, a) => sum + (a.score?.toNumber() || 0), 0) / allExamAttempts.length
       : 0;
 
     // メンバー別統計
@@ -617,7 +617,7 @@ router.get('/team/:teamId', requireAuth, async (req: Request, res: Response) => 
         : 0;
 
       const userAvgExamScore = user.examAttempts.length > 0 
-        ? user.examAttempts.reduce((sum, a) => sum + a.score.toNumber(), 0) / user.examAttempts.length
+        ? user.examAttempts.reduce((sum, a) => sum + (a.score?.toNumber() || 0), 0) / user.examAttempts.length
         : 0;
 
       return {

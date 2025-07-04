@@ -28,6 +28,12 @@ body {
   color: white;
   padding: 1rem 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: fixed; /* 固定表示 */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001; /* サイドバーより上に表示 */
+  height: 70px; /* ヘッダーの高さを明示的に設定 */
 }
 
 .header-content {
@@ -89,6 +95,7 @@ body {
 .app-main {
   flex: 1;
   padding: 2rem 0;
+  margin-top: 70px; /* 固定ヘッダーの高さ分のマージン（ブレッドクラムは個別に配置） */
 }
 
 /* ホームページ */
@@ -333,6 +340,96 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
   text-decoration: none;
+}
+
+/* ドキュメント関連スタイル */
+.document-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.document-navigation {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.breadcrumb-link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  color: #6c757d;
+  margin: 0 0.5rem;
+}
+
+.breadcrumb-current {
+  font-weight: 500;
+  color: #495057;
+}
+
+.document-loading,
+.document-error,
+.document-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.document-loading .loading-spinner {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+.back-button {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.back-button:hover {
+  background: #0056b3;
+  text-decoration: none;
+}
+
+.cta-button.secondary {
+  background: transparent;
+  border: 2px solid white;
+  color: white;
+}
+
+.cta-button.secondary:hover {
+  background: white;
+  color: #667eea;
 }
 
 /* レスポンシブデザイン */
