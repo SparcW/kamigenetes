@@ -1,0 +1,123 @@
+name: Backend API Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'team-learning-platform/backend/**'
+      - '.github/workflows/backend-test.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'team-learning-platform/backend/**'
+      - '.github/workflows/backend-test.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: team-learning-platform/backend/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./team-learning-platform/backend
+      run: npm ci
+
+    - name: Setup test environment
+      working-directory: ./team-learning-platform/backend
+      run: |
+        cp .env.test .env
+        npm run prisma:generate
+
+    - name: Run database migrations
+      working-directory: ./team-learning-platform/backend
+      run: npm run prisma:migrate
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+
+    - name: Run linting
+      working-directory: ./team-learning-platform/backend
+      run: npm run lint
+
+    - name: Run TypeScript compilation
+      working-directory: ./team-learning-platform/backend
+      run: npm run build
+
+    - name: Run tests
+      working-directory: ./team-learning-platform/backend
+      run: npm run test:ci
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+        TEST_DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test_jwt_secret_key_for_testing
+        SESSION_SECRET: test_session_secret_key_for_testing
+        BCRYPT_ROUNDS: 1
+        LOG_LEVEL: silent
+        OTEL_SERVICE_NAME: test-backend
+        OTEL_TRACES_EXPORTER: none
+        OTEL_METRICS_EXPORTER: none
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        directory: ./team-learning-platform/backend/coverage
+        flags: backend
+        name: backend-coverage
+        fail_ci_if_error: true
+
+    - name: Archive test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-node-${{ matrix.node-version }}
+        path: |
+          team-learning-platform/backend/coverage/
+          team-learning-platform/backend/jest-results.xml
+        retention-days: 30
+
+    - name: Comment PR with test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always() && github.event_name == 'pull_request'
+      with:
+        files: "team-learning-platform/backend/jest-results.xml"
+        comment_title: "Backend API Test Results (Node ${{ matrix.node-version }})"
+        check_name: "Backend API Tests (Node ${{ matrix.node-version }})"
