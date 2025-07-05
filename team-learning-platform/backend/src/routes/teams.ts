@@ -21,13 +21,13 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
 
     const whereCondition: any = {
-      isActive: true
+      isActive: true,
     };
 
     if (search) {
       whereCondition.OR = [
         { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { description: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -35,8 +35,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     if (userRole === 'user') {
       whereCondition.memberships = {
         some: {
-          userId: userId
-        }
+          userId: userId,
+        },
       };
     }
 
@@ -54,24 +54,24 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                   username: true,
                   displayName: true,
                   avatarUrl: true,
-                  role: true
-                }
-              }
-            }
+                  role: true,
+                },
+              },
+            },
           },
           creator: {
             select: {
               id: true,
               username: true,
-              displayName: true
-            }
-          }
+              displayName: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: 'desc',
+        },
       }),
-      prisma.team.count({ where: whereCondition })
+      prisma.team.count({ where: whereCondition }),
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -92,8 +92,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
             displayName: tm.user.displayName,
             avatarUrl: tm.user.avatarUrl,
             role: tm.role,
-            joinedAt: tm.joinedAt
-          }))
+            joinedAt: tm.joinedAt,
+          })),
         })),
         pagination: {
           page,
@@ -101,16 +101,16 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
           totalCount,
           totalPages,
           hasNext: page < totalPages,
-          hasPrev: page > 1
-        }
-      }
+          hasPrev: page > 1,
+        },
+      },
     });
 
   } catch (error) {
     console.error('チーム一覧取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -137,25 +137,25 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
                 displayName: true,
                 avatarUrl: true,
                 role: true,
-                lastLoginAt: true
-              }
-            }
-          }
+                lastLoginAt: true,
+              },
+            },
+          },
         },
         creator: {
           select: {
             id: true,
             username: true,
-            displayName: true
-          }
-        }
-      }
+            displayName: true,
+          },
+        },
+      },
     });
 
     if (!team) {
       return res.status(404).json({
         success: false,
-        message: 'チームが見つかりません'
+        message: 'チームが見つかりません',
       });
     }
 
@@ -165,7 +165,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
       if (!isMember) {
         return res.status(403).json({
           success: false,
-          message: 'このチームへのアクセス権限がありません'
+          message: 'このチームへのアクセス権限がありません',
         });
       }
     }
@@ -177,20 +177,20 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
         user: {
           teamMemberships: {
             some: {
-              teamId: id
-            }
-          }
-        }
+              teamId: id,
+            },
+          },
+        },
       },
       _avg: {
-        progressPercentage: true
+        progressPercentage: true,
       },
       _sum: {
-        totalReadingTime: true
-      }
+        totalReadingTime: true,
+      },
     });
 
-    const averageProgress = stats.length > 0 
+    const averageProgress = stats.length > 0
       ? stats.reduce((sum, s) => sum + (s._avg.progressPercentage?.toNumber() || 0), 0) / stats.length
       : 0;
 
@@ -211,21 +211,21 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
           avatarUrl: tm.user.avatarUrl,
           role: tm.role,
           joinedAt: tm.joinedAt,
-          lastLoginAt: tm.user.lastLoginAt
+          lastLoginAt: tm.user.lastLoginAt,
         })),
         stats: {
           memberCount: team.memberships.length,
           averageProgress: Math.round(averageProgress * 100) / 100,
-          totalReadingTime: totalReadingTime
-        }
-      }
+          totalReadingTime: totalReadingTime,
+        },
+      },
     });
 
   } catch (error) {
     console.error('チーム詳細取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -243,14 +243,14 @@ router.post('/', requireAuth, requireTeamManagerOrAdmin, [
     .optional()
     .trim()
     .isLength({ max: 500 })
-    .withMessage('説明は500文字以下で入力してください')
+    .withMessage('説明は500文字以下で入力してください'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -261,14 +261,14 @@ router.post('/', requireAuth, requireTeamManagerOrAdmin, [
     const existingTeam = await prisma.team.findFirst({
       where: {
         name: name,
-        isActive: true
-      }
+        isActive: true,
+      },
     });
 
     if (existingTeam) {
       return res.status(409).json({
         success: false,
-        message: 'このチーム名は既に使用されています'
+        message: 'このチーム名は既に使用されています',
       });
     }
 
@@ -277,17 +277,17 @@ router.post('/', requireAuth, requireTeamManagerOrAdmin, [
       data: {
         name,
         description,
-        createdBy: createdBy!
+        createdBy: createdBy!,
       },
       include: {
         creator: {
           select: {
             id: true,
             username: true,
-            displayName: true
-          }
-        }
-      }
+            displayName: true,
+          },
+        },
+      },
     });
 
     res.status(201).json({
@@ -299,15 +299,15 @@ router.post('/', requireAuth, requireTeamManagerOrAdmin, [
         createdBy: team.creator,
         createdAt: team.createdAt,
         memberCount: 0,
-        members: []
-      }
+        members: [],
+      },
     });
 
   } catch (error) {
     console.error('チーム作成エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -326,14 +326,14 @@ router.put('/:id', requireAuth, requireTeamManagerOrAdmin, [
     .optional()
     .trim()
     .isLength({ max: 500 })
-    .withMessage('説明は500文字以下で入力してください')
+    .withMessage('説明は500文字以下で入力してください'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -348,14 +348,14 @@ router.put('/:id', requireAuth, requireTeamManagerOrAdmin, [
         where: {
           name: name,
           isActive: true,
-          NOT: { id: id }
-        }
+          NOT: { id: id },
+        },
       });
 
       if (existingTeam) {
         return res.status(409).json({
           success: false,
-          message: 'このチーム名は既に使用されています'
+          message: 'このチーム名は既に使用されています',
         });
       }
 
@@ -376,10 +376,10 @@ router.put('/:id', requireAuth, requireTeamManagerOrAdmin, [
           select: {
             id: true,
             username: true,
-            displayName: true
-          }
-        }
-      }
+            displayName: true,
+          },
+        },
+      },
     });
 
     res.json({
@@ -389,15 +389,15 @@ router.put('/:id', requireAuth, requireTeamManagerOrAdmin, [
         name: team.name,
         description: team.description,
         createdBy: team.creator,
-        updatedAt: team.updatedAt
-      }
+        updatedAt: team.updatedAt,
+      },
     });
 
   } catch (error) {
     console.error('チーム更新エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -414,20 +414,20 @@ router.delete('/:id', requireAuth, requireRole(['super_admin']), async (req: Req
       where: { id },
       data: {
         isActive: false,
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     });
 
     res.json({
       success: true,
-      message: 'チームを削除しました'
+      message: 'チームを削除しました',
     });
 
   } catch (error) {
     console.error('チーム削除エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -443,14 +443,14 @@ router.post('/:id/members', requireAuth, requireTeamManagerOrAdmin, [
   body('role')
     .optional()
     .isIn(['manager', 'member'])
-    .withMessage('無効な権限です')
+    .withMessage('無効な権限です'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -459,25 +459,25 @@ router.post('/:id/members', requireAuth, requireTeamManagerOrAdmin, [
 
     // チームの存在確認
     const team = await prisma.team.findUnique({
-      where: { id: teamId, isActive: true }
+      where: { id: teamId, isActive: true },
     });
 
     if (!team) {
       return res.status(404).json({
         success: false,
-        message: 'チームが見つかりません'
+        message: 'チームが見つかりません',
       });
     }
 
     // ユーザーの存在確認
     const user = await prisma.user.findUnique({
-      where: { id: userId, isActive: true }
+      where: { id: userId, isActive: true },
     });
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'ユーザーが見つかりません'
+        message: 'ユーザーが見つかりません',
       });
     }
 
@@ -485,14 +485,14 @@ router.post('/:id/members', requireAuth, requireTeamManagerOrAdmin, [
     const existingMembership = await prisma.teamMembership.findFirst({
       where: {
         userId: userId,
-        teamId: teamId
-      }
+        teamId: teamId,
+      },
     });
 
     if (existingMembership) {
       return res.status(409).json({
         success: false,
-        message: 'ユーザーは既にチームのメンバーです'
+        message: 'ユーザーは既にチームのメンバーです',
       });
     }
 
@@ -501,7 +501,7 @@ router.post('/:id/members', requireAuth, requireTeamManagerOrAdmin, [
       data: {
         userId,
         teamId,
-        role
+        role,
       },
       include: {
         user: {
@@ -509,10 +509,10 @@ router.post('/:id/members', requireAuth, requireTeamManagerOrAdmin, [
             id: true,
             username: true,
             displayName: true,
-            avatarUrl: true
-          }
-        }
-      }
+            avatarUrl: true,
+          },
+        },
+      },
     });
 
     res.status(201).json({
@@ -521,15 +521,15 @@ router.post('/:id/members', requireAuth, requireTeamManagerOrAdmin, [
         id: membership.id,
         user: membership.user,
         role: membership.role,
-        joinedAt: membership.joinedAt
-      }
+        joinedAt: membership.joinedAt,
+      },
     });
 
   } catch (error) {
     console.error('チームメンバー追加エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -546,27 +546,27 @@ router.delete('/:id/members/:userId', requireAuth, requireTeamManagerOrAdmin, as
     const deletedMembership = await prisma.teamMembership.deleteMany({
       where: {
         userId: userId,
-        teamId: teamId
-      }
+        teamId: teamId,
+      },
     });
 
     if (deletedMembership.count === 0) {
       return res.status(404).json({
         success: false,
-        message: 'メンバーシップが見つかりません'
+        message: 'メンバーシップが見つかりません',
       });
     }
 
     res.json({
       success: true,
-      message: 'チームメンバーを削除しました'
+      message: 'チームメンバーを削除しました',
     });
 
   } catch (error) {
     console.error('チームメンバー削除エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -578,14 +578,14 @@ router.delete('/:id/members/:userId', requireAuth, requireTeamManagerOrAdmin, as
 router.put('/:id/members/:userId/role', requireAuth, requireTeamManagerOrAdmin, [
   body('role')
     .isIn(['manager', 'member'])
-    .withMessage('無効な権限です')
+    .withMessage('無効な権限です'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -596,30 +596,30 @@ router.put('/:id/members/:userId/role', requireAuth, requireTeamManagerOrAdmin, 
     const updatedMembership = await prisma.teamMembership.updateMany({
       where: {
         userId: userId,
-        teamId: teamId
+        teamId: teamId,
       },
       data: {
-        role: role
-      }
+        role: role,
+      },
     });
 
     if (updatedMembership.count === 0) {
       return res.status(404).json({
         success: false,
-        message: 'メンバーシップが見つかりません'
+        message: 'メンバーシップが見つかりません',
       });
     }
 
     res.json({
       success: true,
-      message: 'メンバーの権限を変更しました'
+      message: 'メンバーの権限を変更しました',
     });
 
   } catch (error) {
     console.error('チームメンバー権限変更エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -634,7 +634,7 @@ router.get('/my-teams', requireAuth, async (req: Request, res: Response) => {
 
     const memberships = await prisma.teamMembership.findMany({
       where: {
-        userId: userId
+        userId: userId,
       },
       include: {
         team: {
@@ -646,14 +646,14 @@ router.get('/my-teams', requireAuth, async (req: Request, res: Response) => {
                     id: true,
                     username: true,
                     displayName: true,
-                    avatarUrl: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     res.json({
@@ -664,15 +664,15 @@ router.get('/my-teams', requireAuth, async (req: Request, res: Response) => {
         description: membership.team.description,
         role: membership.role,
         joinedAt: membership.joinedAt,
-        memberCount: membership.team.memberships.length
-      }))
+        memberCount: membership.team.memberships.length,
+      })),
     });
 
   } catch (error) {
     console.error('所属チーム一覧取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });

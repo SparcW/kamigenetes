@@ -8,7 +8,7 @@ import {
   loginAttemptsCounter,
   sessionDurationHistogram,
   httpErrorsTotal,
-  httpRequestDuration
+  httpRequestDuration,
 } from '../lib/metrics';
 
 // 型定義は自動的に読み込まれるため、インポート文を削除
@@ -27,15 +27,15 @@ const mockUsers = [
     avatarUrl: null,
     role: 'ADMIN',
     isActive: true,
-    teamMemberships: []
-  }
+    teamMemberships: [],
+  },
 ];
 
 // ログイン試行の制限
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分
   max: 5, // 最大5回まで
-  message: 'ログイン試行回数が上限に達しました。15分後に再試行してください。'
+  message: 'ログイン試行回数が上限に達しました。15分後に再試行してください。',
 });
 
 interface TeamMembership {
@@ -55,7 +55,7 @@ router.post('/login',
   loginLimiter,
   [
     body('username').trim().isLength({ min: 1 }).withMessage('ユーザー名は必須です'),
-    body('password').isLength({ min: 1 }).withMessage('パスワードは必須です')
+    body('password').isLength({ min: 1 }).withMessage('パスワードは必須です'),
   ],
   async (req: Request, res: Response) => {
     const startTime = Date.now();
@@ -66,23 +66,23 @@ router.post('/login',
         httpErrorsTotal.labels('POST', '/auth/login', '400', 'validation_error').inc();
         return res.status(400).json({
           success: false,
-          errors: errors.array()
+          errors: errors.array(),
         });
       }
 
       const { username, password } = req.body;
 
       // ユーザーを検索（一時的にモック使用）
-      const user = mockUsers.find(u => 
-        (u.username === username || u.email === username) && u.isActive
+      const user = mockUsers.find(u =>
+        (u.username === username || u.email === username) && u.isActive,
       );
 
       if (!user || !user.passwordHash) {
         loginAttemptsCounter.labels('failure', 'local').inc();
-        httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
+        httpRequestDuration.labels('POST', '/auth/login', '200').observe((Date.now() - startTime) / 1000);
         return res.status(401).json({
           success: false,
-          message: 'ユーザー名またはパスワードが正しくありません'
+          message: 'ユーザー名またはパスワードが正しくありません',
         });
       }
 
@@ -90,10 +90,10 @@ router.post('/login',
       const isValidPassword = await bcrypt.compare(password, user.passwordHash);
       if (!isValidPassword) {
         loginAttemptsCounter.labels('failure', 'local').inc();
-        httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
+        httpRequestDuration.labels('POST', '/auth/login', '200').observe((Date.now() - startTime) / 1000);
         return res.status(401).json({
           success: false,
-          message: 'ユーザー名またはパスワードが正しくありません'
+          message: 'ユーザー名またはパスワードが正しくありません',
         });
       }
 
@@ -112,7 +112,7 @@ router.post('/login',
 
       // メトリクス記録
       loginAttemptsCounter.labels('success', 'local').inc();
-      httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
+      httpRequestDuration.labels('POST', '/auth/login', '200').observe((Date.now() - startTime) / 1000);
 
       res.json({
         success: true,
@@ -126,25 +126,25 @@ router.post('/login',
           teams: user.teamMemberships.map((tm: TeamMembership) => ({
             id: tm.team.id,
             name: tm.team.name,
-            role: tm.role
-          }))
-        }
+            role: tm.role,
+          })),
+        },
       });
 
     } catch (error) {
       console.error('ログインエラー:', error);
-      
+
       // エラーメトリクス記録
       loginAttemptsCounter.labels('failure', 'local').inc();
-      httpErrorsTotal.labels("POST", "/auth/login", "500", "server_error").inc();
-      httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
-      
+      httpErrorsTotal.labels('POST', '/auth/login', '500', 'server_error').inc();
+      httpRequestDuration.labels('POST', '/auth/login', '200').observe((Date.now() - startTime) / 1000);
+
       res.status(500).json({
         success: false,
-        message: 'サーバーエラーが発生しました'
+        message: 'サーバーエラーが発生しました',
       });
     }
-  }
+  },
 );
 
 /**
@@ -169,7 +169,7 @@ router.post('/register',
     body('displayName')
       .trim()
       .isLength({ min: 1, max: 100 })
-      .withMessage('表示名は1文字以上100文字以下で入力してください')
+      .withMessage('表示名は1文字以上100文字以下で入力してください'),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -177,23 +177,23 @@ router.post('/register',
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          errors: errors.array()
+          errors: errors.array(),
         });
       }
 
       const { username, email, password, displayName } = req.body;
 
       // 既存ユーザーの確認（一時的にモック使用）
-      const existingUser = mockUsers.find(u => 
-        u.username === username || u.email === email
+      const existingUser = mockUsers.find(u =>
+        u.username === username || u.email === email,
       );
 
       if (existingUser) {
         return res.status(409).json({
           success: false,
-          message: existingUser.username === username 
+          message: existingUser.username === username
             ? 'このユーザー名は既に使用されています'
-            : 'このメールアドレスは既に登録されています'
+            : 'このメールアドレスは既に登録されています',
         });
       }
 
@@ -211,7 +211,7 @@ router.post('/register',
         avatarUrl: null,
         role: 'USER',
         isActive: true,
-        teamMemberships: []
+        teamMemberships: [],
       };
       mockUsers.push(newUser);
 
@@ -230,18 +230,18 @@ router.post('/register',
           email: newUser.email,
           role: newUser.role,
           avatarUrl: newUser.avatarUrl,
-          teams: []
-        }
+          teams: [],
+        },
       });
 
     } catch (error) {
       console.error('登録エラー:', error);
       res.status(500).json({
         success: false,
-        message: 'サーバーエラーが発生しました'
+        message: 'サーバーエラーが発生しました',
       });
     }
-  }
+  },
 );
 
 /**
@@ -252,34 +252,34 @@ router.post('/logout', (req: Request, res: Response) => {
   const startTime = Date.now();
   const loginTime = (req.session as any)?.loginTime;
   const userRole = (req.session as any)?.role || 'user';
-  
+
   // セッション継続時間を記録
   if (loginTime) {
     const sessionDuration = (Date.now() - loginTime) / 1000;
     sessionDurationHistogram.labels(userRole).observe(sessionDuration);
   }
-  
+
   req.session.destroy((err: any) => {
     if (err) {
       console.error('セッション削除エラー:', err);
-      
+
       // エラーメトリクス記録
-      httpErrorsTotal.labels("POST", "/auth/login", "500", "server_error").inc();
-      httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
-      
+      httpErrorsTotal.labels('POST', '/auth/login', '500', 'server_error').inc();
+      httpRequestDuration.labels('POST', '/auth/login', '200').observe((Date.now() - startTime) / 1000);
+
       return res.status(500).json({
         success: false,
-        message: 'ログアウトに失敗しました'
+        message: 'ログアウトに失敗しました',
       });
     }
-    
+
     // 成功メトリクス記録
-    httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
-    
+    httpRequestDuration.labels('POST', '/auth/login', '200').observe((Date.now() - startTime) / 1000);
+
     res.clearCookie('connect.sid');
     res.json({
       success: true,
-      message: 'ログアウトしました'
+      message: 'ログアウトしました',
     });
   });
 });
@@ -293,7 +293,7 @@ router.get('/me', async (req: Request, res: Response) => {
     if (!(req.session as any).userId) {
       return res.status(401).json({
         success: false,
-        message: '認証が必要です'
+        message: '認証が必要です',
       });
     }
 
@@ -302,7 +302,7 @@ router.get('/me', async (req: Request, res: Response) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'ユーザーが見つかりません'
+        message: 'ユーザーが見つかりません',
       });
     }
 
@@ -318,16 +318,16 @@ router.get('/me', async (req: Request, res: Response) => {
         teams: user.teamMemberships.map((tm: TeamMembership) => ({
           id: tm.team.id,
           name: tm.team.name,
-          role: tm.role
-        }))
-      }
+          role: tm.role,
+        })),
+      },
     });
 
   } catch (error) {
     console.error('ユーザー情報取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -337,7 +337,7 @@ router.get('/me', async (req: Request, res: Response) => {
  * GET /api/auth/oauth/google
  */
 router.get('/oauth/google', passport.authenticate('google', {
-  scope: ['profile', 'email']
+  scope: ['profile', 'email'],
 }));
 
 /**
@@ -349,7 +349,7 @@ router.get('/oauth/google/callback',
   async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
-      
+
       // セッションに保存
       (req.session as any).userId = user.id;
       (req.session as any).username = user.username;
@@ -363,7 +363,7 @@ router.get('/oauth/google/callback',
       console.error('OAuth認証エラー:', error);
       res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
     }
-  }
+  },
 );
 
 /**
@@ -371,7 +371,7 @@ router.get('/oauth/google/callback',
  * GET /api/auth/oauth/github
  */
 router.get('/oauth/github', passport.authenticate('github', {
-  scope: ['user:email']
+  scope: ['user:email'],
 }));
 
 /**
@@ -383,7 +383,7 @@ router.get('/oauth/github/callback',
   async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
-      
+
       // セッションに保存
       (req.session as any).userId = user.id;
       (req.session as any).username = user.username;
@@ -397,7 +397,7 @@ router.get('/oauth/github/callback',
       console.error('OAuth認証エラー:', error);
       res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
     }
-  }
+  },
 );
 
 export default router;

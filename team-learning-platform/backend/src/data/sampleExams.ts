@@ -11,7 +11,7 @@ const basicKubernetesQuestions: ExamQuestion[] = [
     explanation: 'Podは1つ以上のコンテナをまとめた、Kubernetesにおけるデプロイメントとスケールの最小単位です。',
     points: 10,
     difficulty: 1,
-    tags: ['Pod', 'Basic']
+    tags: ['Pod', 'Basic'],
   },
   {
     id: 'q2',
@@ -22,7 +22,7 @@ const basicKubernetesQuestions: ExamQuestion[] = [
     explanation: 'Pod内のコンテナは同じネットワーク空間とストレージボリュームを共有しますが、プロセス空間とユーザー空間は独立しています。',
     points: 15,
     difficulty: 2,
-    tags: ['Pod', 'Network', 'Storage']
+    tags: ['Pod', 'Network', 'Storage'],
   },
   {
     id: 'q3',
@@ -32,8 +32,8 @@ const basicKubernetesQuestions: ExamQuestion[] = [
     explanation: 'kubectl runコマンドを使用してPodを作成できます。--imageオプションでコンテナイメージを指定します。',
     points: 20,
     difficulty: 2,
-    tags: ['kubectl', 'Pod', 'Commands']
-  }
+    tags: ['kubectl', 'Pod', 'Commands'],
+  },
 ];
 
 // YAML生成の試験問題
@@ -64,7 +64,7 @@ spec:
     explanation: 'Deploymentは指定された数のPodレプリカを管理するKubernetesオブジェクトです。selectorとtemplate.metadata.labelsが一致している必要があります。',
     points: 25,
     difficulty: 3,
-    tags: ['Deployment', 'YAML', 'Replica']
+    tags: ['Deployment', 'YAML', 'Replica'],
   },
   {
     id: 'q5',
@@ -85,8 +85,8 @@ spec:
     explanation: 'ServiceはPodへのネットワークアクセスを提供します。selectorでDeploymentのPodを選択し、portでサービスポートを指定します。',
     points: 25,
     difficulty: 3,
-    tags: ['Service', 'YAML', 'ClusterIP']
-  }
+    tags: ['Service', 'YAML', 'ClusterIP'],
+  },
 ];
 
 // 実践的なkubectlコマンドの試験問題
@@ -99,7 +99,7 @@ const practicalKubectlQuestions: ExamQuestion[] = [
     explanation: '--all-namespacesオプションを使用すると、すべてのネームスペースのリソースを表示できます。',
     points: 15,
     difficulty: 2,
-    tags: ['kubectl', 'Pod', 'Namespace']
+    tags: ['kubectl', 'Pod', 'Namespace'],
   },
   {
     id: 'q7',
@@ -109,8 +109,8 @@ const practicalKubectlQuestions: ExamQuestion[] = [
     explanation: 'kubectl scaleコマンドを使用してDeploymentのレプリカ数を変更できます。',
     points: 20,
     difficulty: 2,
-    tags: ['kubectl', 'Scale', 'Deployment']
-  }
+    tags: ['kubectl', 'Scale', 'Deployment'],
+  },
 ];
 
 // サンプル試験データ
@@ -128,7 +128,7 @@ export const sampleExams: Exam[] = [
     tags: ['基本', 'Pod', 'Service', 'Deployment'],
     isActive: true,
     createdAt: new Date('2025-01-01'),
-    updatedAt: new Date('2025-01-01')
+    updatedAt: new Date('2025-01-01'),
   },
   {
     id: 'exam-2',
@@ -143,7 +143,7 @@ export const sampleExams: Exam[] = [
     tags: ['YAML', 'Deployment', 'Service', '設定'],
     isActive: true,
     createdAt: new Date('2025-01-02'),
-    updatedAt: new Date('2025-01-02')
+    updatedAt: new Date('2025-01-02'),
   },
   {
     id: 'exam-3',
@@ -158,7 +158,7 @@ export const sampleExams: Exam[] = [
     tags: ['kubectl', 'コマンド', '実践'],
     isActive: true,
     createdAt: new Date('2025-01-03'),
-    updatedAt: new Date('2025-01-03')
+    updatedAt: new Date('2025-01-03'),
   },
   {
     id: 'exam-4',
@@ -173,8 +173,8 @@ export const sampleExams: Exam[] = [
     tags: ['総合', '上級', 'YAML', 'kubectl'],
     isActive: true,
     createdAt: new Date('2025-01-04'),
-    updatedAt: new Date('2025-01-04')
-  }
+    updatedAt: new Date('2025-01-04'),
+  },
 ];
 
 // AWS ECSとKubernetesの比較問題
@@ -188,7 +188,7 @@ const ecsVsKubernetesQuestions: ExamQuestion[] = [
     explanation: 'ECSのTaskDefinitionはコンテナの実行仕様を定義し、KubernetesのPodマニフェストと類似の役割を果たします。',
     points: 15,
     difficulty: 2,
-    tags: ['ECS', 'Comparison', 'Pod']
+    tags: ['ECS', 'Comparison', 'Pod'],
   },
   {
     id: 'q9',
@@ -198,14 +198,14 @@ const ecsVsKubernetesQuestions: ExamQuestion[] = [
       'Pod + Service',
       'Deployment + Service',
       'ReplicaSet + Service',
-      'StatefulSet + Service'
+      'StatefulSet + Service',
     ],
     correctAnswer: 'Deployment + Service',
     explanation: 'ECSのServiceは指定された数のTaskを維持し、ロードバランシングを提供します。これはKubernetesのDeployment（レプリカ管理）+ Service（ロードバランシング）の組み合わせに相当します。',
     points: 20,
     difficulty: 3,
-    tags: ['ECS', 'Comparison', 'Deployment', 'Service']
-  }
+    tags: ['ECS', 'Comparison', 'Deployment', 'Service'],
+  },
 ];
 
 // ECS移行者向けの特別な試験
@@ -222,7 +222,7 @@ export const ecsTransitionExam: Exam = {
   tags: ['ECS', '移行', '比較', 'AWS'],
   isActive: true,
   createdAt: new Date('2025-01-05'),
-  updatedAt: new Date('2025-01-05')
+  updatedAt: new Date('2025-01-05'),
 };
 
 // 完全な試験リストにECS移行試験を追加

@@ -22,8 +22,8 @@ router.get('/', requireAuth, requireRole(['super_admin', 'team_manager']), async
         displayName: 'Administrator',
         role: 'ADMIN',
         isActive: true,
-        createdAt: new Date()
-      }
+        createdAt: new Date(),
+      },
     ];
 
     res.json({
@@ -33,14 +33,14 @@ router.get('/', requireAuth, requireRole(['super_admin', 'team_manager']), async
         page: 1,
         limit: 10,
         total: 1,
-        totalPages: 1
-      }
+        totalPages: 1,
+      },
     });
   } catch (error) {
     console.error('ユーザー一覧取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -52,7 +52,7 @@ router.get('/', requireAuth, requireRole(['super_admin', 'team_manager']), async
 router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     // 一時的にモックデータを返却
     if (id === '1') {
       const mockUser = {
@@ -63,24 +63,24 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
         role: 'ADMIN',
         isActive: true,
         createdAt: new Date(),
-        teams: []
+        teams: [],
       };
 
       res.json({
         success: true,
-        user: mockUser
+        user: mockUser,
       });
     } else {
       res.status(404).json({
         success: false,
-        message: 'ユーザーが見つかりません'
+        message: 'ユーザーが見つかりません',
       });
     }
   } catch (error) {
     console.error('ユーザー詳細取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });

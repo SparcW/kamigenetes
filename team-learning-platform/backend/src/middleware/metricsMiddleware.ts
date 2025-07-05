@@ -9,7 +9,7 @@ import {
   activeUsersGauge,
   userActionsTotal,
   errorRateGauge,
-  responseTimeP95
+  responseTimeP95,
 } from '../lib/metrics';
 
 // リクエスト拡張（ユーザー情報追加）
@@ -36,7 +36,7 @@ const normalizeRoute = (originalUrl: string, route?: string): string => {
   if (route) {
     return route;
   }
-  
+
   // パラメータ部分を正規化
   return originalUrl
     .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id') // UUID
@@ -58,7 +58,7 @@ const getProgressRange = (percentage: number): string => {
 export const metricsMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
   (req as any).startTime = startTime;
-  
+
   // レスポンス完了時の処理
   res.on('finish', () => {
     const endTime = Date.now();
@@ -68,32 +68,32 @@ export const metricsMiddleware = (req: Request, res: Response, next: NextFunctio
     const method = req.method;
     const userId = (req as any).user?.id || 'anonymous';
     const userRole = (req as any).user?.role || 'guest';
-    
+
     // === HTTPメトリクスの記録 ===
     httpRequestsTotal.labels(method, route, statusCode, userId).inc();
     httpRequestDuration.labels(method, route, statusCode).observe(duration);
-    
+
     // エラーメトリクス記録
     const errorType = getErrorType(res.statusCode);
     if (errorType !== 'success') {
       httpErrorsTotal.labels(method, route, statusCode, errorType).inc();
     }
-    
+
     // ユーザーアクション記録
     if ((req as any).user) {
       let actionType = 'view';
       if (method === 'POST') actionType = 'create';
       else if (method === 'PUT' || method === 'PATCH') actionType = 'update';
       else if (method === 'DELETE') actionType = 'delete';
-      
+
       userActionsTotal.labels(actionType, userRole).inc();
     }
-    
+
     // 応答時間のP95更新（簡易版）
     const endpointGroup = route.split('/')[1] || 'root';
     responseTimeP95.labels(endpointGroup).set(duration);
   });
-  
+
   next();
 };
 
@@ -108,34 +108,34 @@ export const recordLearningEvent = (
     examScore?: number;
     examType?: string;
     result?: 'pass' | 'fail';
-  }
+  },
 ) => {
   const { documentId, examId, progressPercentage, examScore, examType, result } = metadata;
-  
+
   switch (eventType) {
-    case 'document_view':
-      if (documentId) {
-        // document_views_totalとlearning_events_totalの両方を更新
-        // documentViewsTotal.labels(documentId, userId, req.user?.role || 'guest').inc();
-        // learningEventsTotal.labels(userId, eventType, documentId).inc();
-      }
-      break;
-      
-    case 'progress_update':
-      if (documentId && progressPercentage !== undefined) {
-        const progressRange = getProgressRange(progressPercentage);
-        // progressUpdatesTotal.labels(userId, documentId, progressRange).inc();
-        // learningEventsTotal.labels(userId, eventType, documentId).inc();
-      }
-      break;
-      
-    case 'exam_attempt':
-      if (examId && examScore !== undefined && examType && result) {
-        // examAttemptsTotal.labels(examId, userId, examType, result).inc();
-        // examScoresHistogram.labels(examId, examType).observe(examScore);
-        // learningEventsTotal.labels(userId, eventType, examId).inc();
-      }
-      break;
+  case 'document_view':
+    if (documentId) {
+      // document_views_totalとlearning_events_totalの両方を更新
+      // documentViewsTotal.labels(documentId, userId, req.user?.role || 'guest').inc();
+      // learningEventsTotal.labels(userId, eventType, documentId).inc();
+    }
+    break;
+
+  case 'progress_update':
+    if (documentId && progressPercentage !== undefined) {
+      const progressRange = getProgressRange(progressPercentage);
+      // progressUpdatesTotal.labels(userId, documentId, progressRange).inc();
+      // learningEventsTotal.labels(userId, eventType, documentId).inc();
+    }
+    break;
+
+  case 'exam_attempt':
+    if (examId && examScore !== undefined && examType && result) {
+      // examAttemptsTotal.labels(examId, userId, examType, result).inc();
+      // examScoresHistogram.labels(examId, examType).observe(examScore);
+      // learningEventsTotal.labels(userId, eventType, examId).inc();
+    }
+    break;
   }
 };
 
@@ -145,12 +145,12 @@ const userLastSeen = new Map<string, number>();
 
 export const updateActiveUsers = (req: Request, res: Response, next: NextFunction) => {
   const userId = (req as any).user?.id;
-  
+
   if (userId) {
     const now = Date.now();
     activeUsers.add(userId);
     userLastSeen.set(userId, now);
-    
+
     // 古いユーザーをクリーンアップ（15分以上非アクティブ）
     const fifteenMinutesAgo = now - 15 * 60 * 1000;
     userLastSeen.forEach((lastSeen, uid) => {
@@ -159,31 +159,31 @@ export const updateActiveUsers = (req: Request, res: Response, next: NextFunctio
         userLastSeen.delete(uid);
       }
     });
-    
+
     // アクティブユーザー数を更新
     activeUsersGauge.labels('15min').set(activeUsers.size);
   }
-  
+
   next();
 };
 
 // === エラー率計算・更新関数 ===
-let errorCountWindow: number[] = [];
-let totalCountWindow: number[] = [];
+const errorCountWindow: number[] = [];
+const totalCountWindow: number[] = [];
 
 export const updateErrorRate = () => {
   // 過去5分間のエラー率を計算
   const now = Date.now();
   const fiveMinutesAgo = now - 5 * 60 * 1000;
-  
+
   // 現在のエラー数・総リクエスト数を取得（簡易実装）
   // 実際の実装では、より詳細な時系列データが必要
-  
+
   // ここでは概算の実装
-  const currentErrorRate = errorCountWindow.length > 0 
+  const currentErrorRate = errorCountWindow.length > 0
     ? (errorCountWindow.reduce((a, b) => a + b, 0) / totalCountWindow.reduce((a, b) => a + b, 1)) * 100
     : 0;
-    
+
   errorRateGauge.labels('5min', 'http_error').set(currentErrorRate);
 };
 
@@ -195,7 +195,7 @@ export const recordDbMetrics = (
   databaseType: 'postgresql' | 'redis',
   operation: string,
   duration: number,
-  status: 'success' | 'error'
+  status: 'success' | 'error',
 ) => {
   // dbQueryDuration.labels(databaseType, operation).observe(duration);
   // dbQueriesTotal.labels(databaseType, operation, status).inc();

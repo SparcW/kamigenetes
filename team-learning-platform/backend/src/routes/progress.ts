@@ -8,7 +8,7 @@ import {
   readingTimeHistogram,
   favoriteCounter,
   httpErrorsTotal,
-  httpRequestDuration
+  httpRequestDuration,
 } from '../lib/metrics';
 
 const router = Router();
@@ -30,12 +30,12 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
 
     const whereCondition: any = {
-      userId: userId
+      userId: userId,
     };
 
     if (category) {
       whereCondition.document = {
-        category: category
+        category: category,
       };
     }
 
@@ -58,22 +58,22 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
               filePath: true,
               category: true,
               estimatedReadingTime: true,
-              difficultyLevel: true
-            }
-          }
+              difficultyLevel: true,
+            },
+          },
         },
         orderBy: {
-          updatedAt: 'desc'
-        }
+          updatedAt: 'desc',
+        },
       }),
-      prisma.readingProgress.count({ where: whereCondition })
+      prisma.readingProgress.count({ where: whereCondition }),
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
 
     // メトリクス記録
     const userRole = (req.session as any).role || 'user';
-    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
+    httpRequestDuration.labels('GET', '/progress', '200').observe((Date.now() - startTime) / 1000);
     progressResponseTime.labels('list', 'get').observe((Date.now() - startTime) / 1000);
 
     res.json({
@@ -86,7 +86,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
           totalReadingTime: p.totalReadingTime,
           lastPosition: p.lastPosition,
           completedAt: p.completedAt,
-          updatedAt: p.updatedAt
+          updatedAt: p.updatedAt,
         })),
         pagination: {
           page,
@@ -94,21 +94,21 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
           totalCount,
           totalPages,
           hasNext: page < totalPages,
-          hasPrev: page > 1
-        }
-      }
+          hasPrev: page > 1,
+        },
+      },
     });
 
   } catch (error) {
     console.error('読書進捗一覧取得エラー:', error);
-    
+
     // エラーメトリクス記録
-    httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
-    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
-    
+    httpErrorsTotal.labels('GET', '/progress', '500', 'server_error').inc();
+    httpRequestDuration.labels('GET', '/progress', '200').observe((Date.now() - startTime) / 1000);
+
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -126,8 +126,8 @@ router.get('/:documentId', requireAuth, async (req: Request, res: Response) => {
       where: {
         userId_documentId: {
           userId: userId!,
-          documentId: documentId
-        }
+          documentId: documentId,
+        },
       },
       include: {
         document: {
@@ -137,16 +137,16 @@ router.get('/:documentId', requireAuth, async (req: Request, res: Response) => {
             filePath: true,
             category: true,
             estimatedReadingTime: true,
-            difficultyLevel: true
-          }
-        }
-      }
+            difficultyLevel: true,
+          },
+        },
+      },
     });
 
     if (!progress) {
       return res.status(404).json({
         success: false,
-        message: '読書進捗が見つかりません'
+        message: '読書進捗が見つかりません',
       });
     }
 
@@ -159,15 +159,15 @@ router.get('/:documentId', requireAuth, async (req: Request, res: Response) => {
         totalReadingTime: progress.totalReadingTime,
         lastPosition: progress.lastPosition,
         completedAt: progress.completedAt,
-        updatedAt: progress.updatedAt
-      }
+        updatedAt: progress.updatedAt,
+      },
     });
 
   } catch (error) {
     console.error('読書進捗取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -190,16 +190,16 @@ router.post('/', requireAuth, [
   body('lastPosition')
     .optional()
     .isInt({ min: 0 })
-    .withMessage('最後の位置は0以上の整数で指定してください')
+    .withMessage('最後の位置は0以上の整数で指定してください'),
 ], async (req: Request, res: Response) => {
   const startTime = Date.now();
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
+      httpErrorsTotal.labels('GET', '/progress', '500', 'server_error').inc();
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -208,14 +208,14 @@ router.post('/', requireAuth, [
 
     // ドキュメントの存在確認
     const document = await prisma.document.findUnique({
-      where: { id: documentId }
+      where: { id: documentId },
     });
 
     if (!document) {
-      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
+      httpErrorsTotal.labels('GET', '/progress', '500', 'server_error').inc();
       return res.status(404).json({
         success: false,
-        message: 'ドキュメントが見つかりません'
+        message: 'ドキュメントが見つかりません',
       });
     }
 
@@ -224,9 +224,9 @@ router.post('/', requireAuth, [
       where: {
         userId_documentId: {
           userId: userId!,
-          documentId: documentId
-        }
-      }
+          documentId: documentId,
+        },
+      },
     });
 
     let progress;
@@ -240,15 +240,15 @@ router.post('/', requireAuth, [
         where: {
           userId_documentId: {
             userId: userId!,
-            documentId: documentId
-          }
+            documentId: documentId,
+          },
         },
         data: {
           progressPercentage,
           totalReadingTime: existingProgress.totalReadingTime + totalReadingTime,
           lastPosition,
           completedAt,
-          updatedAt: now
+          updatedAt: now,
         },
         include: {
           document: {
@@ -256,10 +256,10 @@ router.post('/', requireAuth, [
               id: true,
               title: true,
               filePath: true,
-              category: true
-            }
-          }
-        }
+              category: true,
+            },
+          },
+        },
       });
     } else {
       // 作成
@@ -270,7 +270,7 @@ router.post('/', requireAuth, [
           progressPercentage,
           totalReadingTime,
           // lastPosition,
-          completedAt
+          completedAt,
         },
         include: {
           document: {
@@ -278,10 +278,10 @@ router.post('/', requireAuth, [
               id: true,
               title: true,
               filePath: true,
-              category: true
-            }
-          }
-        }
+              category: true,
+            },
+          },
+        },
       });
     }
 
@@ -290,7 +290,7 @@ router.post('/', requireAuth, [
     progressUpdateCounter.labels(userIdLabel, document.category, isCompletion).inc();
     readingTimeHistogram.labels(document.category, userIdLabel).observe(totalReadingTime);
     progressResponseTime.labels('update', 'post').observe((Date.now() - startTime) / 1000);
-    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
+    httpRequestDuration.labels('GET', '/progress', '200').observe((Date.now() - startTime) / 1000);
 
     res.json({
       success: true,
@@ -301,20 +301,20 @@ router.post('/', requireAuth, [
         totalReadingTime: progress.totalReadingTime,
         lastPosition: progress.lastPosition,
         completedAt: progress.completedAt,
-        updatedAt: progress.updatedAt
-      }
+        updatedAt: progress.updatedAt,
+      },
     });
 
   } catch (error) {
     console.error('読書進捗作成・更新エラー:', error);
-    
+
     // エラーメトリクス記録
-    httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
-    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
-    
+    httpErrorsTotal.labels('GET', '/progress', '500', 'server_error').inc();
+    httpRequestDuration.labels('GET', '/progress', '200').observe((Date.now() - startTime) / 1000);
+
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -331,27 +331,27 @@ router.delete('/:documentId', requireAuth, async (req: Request, res: Response) =
     const deletedProgress = await prisma.readingProgress.deleteMany({
       where: {
         userId: userId!,
-        documentId: documentId
-      }
+        documentId: documentId,
+      },
     });
 
     if (deletedProgress.count === 0) {
       return res.status(404).json({
         success: false,
-        message: '読書進捗が見つかりません'
+        message: '読書進捗が見つかりません',
       });
     }
 
     res.json({
       success: true,
-      message: '読書進捗を削除しました'
+      message: '読書進捗を削除しました',
     });
 
   } catch (error) {
     console.error('読書進捗削除エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -366,7 +366,7 @@ router.get('/favorites', requireAuth, async (req: Request, res: Response) => {
 
     const favorites = await prisma.favorite.findMany({
       where: {
-        userId: userId!
+        userId: userId!,
       },
       include: {
         document: {
@@ -376,13 +376,13 @@ router.get('/favorites', requireAuth, async (req: Request, res: Response) => {
             filePath: true,
             category: true,
             estimatedReadingTime: true,
-            difficultyLevel: true
-          }
-        }
+            difficultyLevel: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: 'desc',
+      },
     });
 
     res.json({
@@ -391,15 +391,15 @@ router.get('/favorites', requireAuth, async (req: Request, res: Response) => {
         id: fav.id,
         document: fav.document,
         notes: fav.notes,
-        createdAt: fav.createdAt
-      }))
+        createdAt: fav.createdAt,
+      })),
     });
 
   } catch (error) {
     console.error('お気に入り一覧取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -416,16 +416,16 @@ router.post('/favorites', requireAuth, [
     .optional()
     .isString()
     .isLength({ max: 500 })
-    .withMessage('ノートは500文字以下で入力してください')
+    .withMessage('ノートは500文字以下で入力してください'),
 ], async (req: Request, res: Response) => {
   const startTime = Date.now();
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
+      httpErrorsTotal.labels('GET', '/progress', '500', 'server_error').inc();
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -434,14 +434,14 @@ router.post('/favorites', requireAuth, [
 
     // ドキュメントの存在確認
     const document = await prisma.document.findUnique({
-      where: { id: documentId }
+      where: { id: documentId },
     });
 
     if (!document) {
-      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
+      httpErrorsTotal.labels('GET', '/progress', '500', 'server_error').inc();
       return res.status(404).json({
         success: false,
-        message: 'ドキュメントが見つかりません'
+        message: 'ドキュメントが見つかりません',
       });
     }
 
@@ -450,16 +450,16 @@ router.post('/favorites', requireAuth, [
       where: {
         userId_documentId: {
           userId: userId!,
-          documentId: documentId
-        }
-      }
+          documentId: documentId,
+        },
+      },
     });
 
     if (existingFavorite) {
-      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
+      httpErrorsTotal.labels('GET', '/progress', '500', 'server_error').inc();
       return res.status(409).json({
         success: false,
-        message: '既にお気に入りに追加されています'
+        message: '既にお気に入りに追加されています',
       });
     }
 
@@ -468,7 +468,7 @@ router.post('/favorites', requireAuth, [
       data: {
         userId: userId!,
         documentId,
-        notes
+        notes,
       },
       include: {
         document: {
@@ -476,16 +476,16 @@ router.post('/favorites', requireAuth, [
             id: true,
             title: true,
             filePath: true,
-            category: true
-          }
-        }
-      }
+            category: true,
+          },
+        },
+      },
     });
 
     // メトリクス記録
     const userIdLabel = (req.session as any).userId || 'anonymous';
     favoriteCounter.labels(document.category || 'unknown', userIdLabel).inc();
-    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
+    httpRequestDuration.labels('GET', '/progress', '200').observe((Date.now() - startTime) / 1000);
 
     res.status(201).json({
       success: true,
@@ -493,20 +493,20 @@ router.post('/favorites', requireAuth, [
         id: favorite.id,
         document: favorite.document,
         notes: favorite.notes,
-        createdAt: favorite.createdAt
-      }
+        createdAt: favorite.createdAt,
+      },
     });
 
   } catch (error) {
     console.error('お気に入り追加エラー:', error);
-    
+
     // エラーメトリクス記録
-    httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
-    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
-    
+    httpErrorsTotal.labels('GET', '/progress', '500', 'server_error').inc();
+    httpRequestDuration.labels('GET', '/progress', '200').observe((Date.now() - startTime) / 1000);
+
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -523,27 +523,27 @@ router.delete('/favorites/:documentId', requireAuth, async (req: Request, res: R
     const deletedFavorite = await prisma.favorite.deleteMany({
       where: {
         userId: userId!,
-        documentId: documentId
-      }
+        documentId: documentId,
+      },
     });
 
     if (deletedFavorite.count === 0) {
       return res.status(404).json({
         success: false,
-        message: 'お気に入りが見つかりません'
+        message: 'お気に入りが見つかりません',
       });
     }
 
     res.json({
       success: true,
-      message: 'お気に入りを削除しました'
+      message: 'お気に入りを削除しました',
     });
 
   } catch (error) {
     console.error('お気に入り削除エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -561,28 +561,28 @@ router.get('/stats', requireAuth, async (req: Request, res: Response) => {
       completedCount,
       totalReadingTime,
       favoriteCount,
-      avgProficiency
+      avgProficiency,
     ] = await Promise.all([
       prisma.readingProgress.count({
-        where: { userId: userId! }
+        where: { userId: userId! },
       }),
       prisma.readingProgress.count({
-        where: { 
+        where: {
           userId: userId!,
-          progressPercentage: 100
-        }
+          progressPercentage: 100,
+        },
       }),
       prisma.readingProgress.aggregate({
         where: { userId: userId! },
-        _sum: { totalReadingTime: true }
+        _sum: { totalReadingTime: true },
       }),
       prisma.favorite.count({
-        where: { userId: userId! }
+        where: { userId: userId! },
       }),
       prisma.proficiencyLevel.aggregate({
         where: { userId: userId! },
-        _avg: { level: true }
-      })
+        _avg: { level: true },
+      }),
     ]);
 
     res.json({
@@ -593,15 +593,15 @@ router.get('/stats', requireAuth, async (req: Request, res: Response) => {
         totalReadingTime: totalReadingTime._sum.totalReadingTime || 0,
         favoriteCount,
         averageProficiency: avgProficiency._avg.level || 0,
-        completionRate: totalProgress > 0 ? (completedCount / totalProgress) * 100 : 0
-      }
+        completionRate: totalProgress > 0 ? (completedCount / totalProgress) * 100 : 0,
+      },
     });
 
   } catch (error) {
     console.error('学習統計取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
