@@ -12,6 +12,9 @@ COPY package*.json ./
 # 依存関係のインストール
 RUN npm install
 
+# 実行権限を設定
+RUN chmod +x node_modules/.bin/*
+
 # ソースコードをコピー
 COPY . .
 
