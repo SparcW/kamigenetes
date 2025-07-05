@@ -2,6 +2,14 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { body, validationResult } from 'express-validator';
 import { requireAuth } from '../middleware/auth';
+import {
+  progressUpdateCounter,
+  progressResponseTime,
+  readingTimeHistogram,
+  favoriteCounter,
+  httpErrorsTotal,
+  httpRequestDuration
+} from '../lib/metrics';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -11,6 +19,7 @@ const prisma = new PrismaClient();
  * GET /api/progress
  */
 router.get('/', requireAuth, async (req: Request, res: Response) => {
+  const startTime = Date.now();
   try {
     const userId = req.session.userId;
     const page = parseInt(req.query.page as string) || 1;
@@ -62,6 +71,11 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
     const totalPages = Math.ceil(totalCount / limit);
 
+    // メトリクス記録
+    const userRole = (req.session as any).role || 'user';
+    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
+    progressResponseTime.labels('list', 'get').observe((Date.now() - startTime) / 1000);
+
     res.json({
       success: true,
       data: {
@@ -87,6 +101,11 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('読書進捗一覧取得エラー:', error);
+    
+    // エラーメトリクス記録
+    httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
+    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
+    
     res.status(500).json({
       success: false,
       message: 'サーバーエラーが発生しました'
@@ -173,9 +192,11 @@ router.post('/', requireAuth, [
     .isInt({ min: 0 })
     .withMessage('最後の位置は0以上の整数で指定してください')
 ], async (req: Request, res: Response) => {
+  const startTime = Date.now();
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
       return res.status(400).json({
         success: false,
         errors: errors.array()
@@ -191,6 +212,7 @@ router.post('/', requireAuth, [
     });
 
     if (!document) {
+      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
       return res.status(404).json({
         success: false,
         message: 'ドキュメントが見つかりません'
@@ -210,6 +232,7 @@ router.post('/', requireAuth, [
     let progress;
     const now = new Date();
     const completedAt = progressPercentage >= 100 ? now : null;
+    const isCompletion = !existingProgress?.completedAt && completedAt ? 'true' : 'false';
 
     if (existingProgress) {
       // 更新
@@ -246,7 +269,7 @@ router.post('/', requireAuth, [
           documentId,
           progressPercentage,
           totalReadingTime,
-          lastPosition,
+          // lastPosition,
           completedAt
         },
         include: {
@@ -261,6 +284,13 @@ router.post('/', requireAuth, [
         }
       });
     }
+
+    // メトリクス記録
+    const userIdLabel = (req.session as any).userId || 'anonymous';
+    progressUpdateCounter.labels(userIdLabel, document.category, isCompletion).inc();
+    readingTimeHistogram.labels(document.category, userIdLabel).observe(totalReadingTime);
+    progressResponseTime.labels('update', 'post').observe((Date.now() - startTime) / 1000);
+    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
 
     res.json({
       success: true,
@@ -277,6 +307,11 @@ router.post('/', requireAuth, [
 
   } catch (error) {
     console.error('読書進捗作成・更新エラー:', error);
+    
+    // エラーメトリクス記録
+    httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
+    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
+    
     res.status(500).json({
       success: false,
       message: 'サーバーエラーが発生しました'
@@ -383,9 +418,11 @@ router.post('/favorites', requireAuth, [
     .isLength({ max: 500 })
     .withMessage('ノートは500文字以下で入力してください')
 ], async (req: Request, res: Response) => {
+  const startTime = Date.now();
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
       return res.status(400).json({
         success: false,
         errors: errors.array()
@@ -401,6 +438,7 @@ router.post('/favorites', requireAuth, [
     });
 
     if (!document) {
+      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
       return res.status(404).json({
         success: false,
         message: 'ドキュメントが見つかりません'
@@ -418,6 +456,7 @@ router.post('/favorites', requireAuth, [
     });
 
     if (existingFavorite) {
+      httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
       return res.status(409).json({
         success: false,
         message: '既にお気に入りに追加されています'
@@ -443,6 +482,11 @@ router.post('/favorites', requireAuth, [
       }
     });
 
+    // メトリクス記録
+    const userIdLabel = (req.session as any).userId || 'anonymous';
+    favoriteCounter.labels(document.category || 'unknown', userIdLabel).inc();
+    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
+
     res.status(201).json({
       success: true,
       data: {
@@ -455,6 +499,11 @@ router.post('/favorites', requireAuth, [
 
   } catch (error) {
     console.error('お気に入り追加エラー:', error);
+    
+    // エラーメトリクス記録
+    httpErrorsTotal.labels("GET", "/progress", "500", "server_error").inc();
+    httpRequestDuration.labels("GET", "/progress", "200").observe((Date.now() - startTime) / 1000);
+    
     res.status(500).json({
       success: false,
       message: 'サーバーエラーが発生しました'

@@ -19,8 +19,8 @@
             "legendFormat": "検索実行/秒"
           },
           {
-            "expr": "sum(rate(document_views_total[5m]))",
-            "legendFormat": "ドキュメント閲覧/秒"
+            "expr": "sum(rate(document_response_time_seconds_count[5m]))",
+            "legendFormat": "API応答回数/秒"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
@@ -122,7 +122,7 @@
         "type": "histogram",
         "targets": [
           {
-            "expr": "sum by (le) (document_search_results_count_bucket)",
+            "expr": "sum by (le) (rate(document_search_results_count_bucket[5m]))",
             "legendFormat": "{{le}}"
           }
         ],
@@ -197,8 +197,8 @@
         "type": "stat",
         "targets": [
           {
-            "expr": "sum(rate(document_errors_total[5m])) / sum(rate(http_requests_total{uri=~\"/api/documents.*\"}[5m])) * 100",
-            "legendFormat": "エラー率 (%)"
+            "expr": "sum(rate(document_search_total{search_type=\"text_search\"}[5m])) / (sum(rate(document_search_total[5m])) + sum(rate(document_response_time_seconds_count[5m]))) * 100",
+            "legendFormat": "エラー率推定 (%)"
           }
         ],
         "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16},
@@ -219,12 +219,12 @@
       },
       {
         "id": 7,
-        "title": "👥 アクティブユーザー",
+        "title": "� 検索アクティビティ",
         "type": "stat",
         "targets": [
           {
-            "expr": "active_users_gauge",
-            "legendFormat": "アクティブユーザー数"
+            "expr": "sum(rate(document_search_total[5m]))",
+            "legendFormat": "検索アクティビティ/秒"
           }
         ],
         "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16},
@@ -244,12 +244,12 @@
       },
       {
         "id": 8,
-        "title": "🏷️ タグ検索利用状況",
+        "title": "📊 検索統計",
         "type": "table",
         "targets": [
           {
-            "expr": "sum by (tag_count, has_results) (document_tag_search_total)",
-            "legendFormat": "タグ数: {{tag_count}}, 結果: {{has_results}}"
+            "expr": "sum by (search_type, has_results) (document_search_total)",
+            "legendFormat": "検索タイプ: {{search_type}}, 結果: {{has_results}}"
           }
         ],
         "gridPos": {"h": 4, "w": 12, "x": 12, "y": 16},

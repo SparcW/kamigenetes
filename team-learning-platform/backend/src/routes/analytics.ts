@@ -1,6 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { 
+  leaderboardRequestsCounter, 
+  statisticsRequestsCounter, 
+  teamPerformanceAnalysisCounter, 
+  individualPerformanceAnalysisCounter,
+  analyticsErrorsCounter,
+  analyticsResponseTimeHistogram
+} from '../lib/metrics';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -10,9 +18,17 @@ const prisma = new PrismaClient();
  * GET /api/analytics/leaderboard/global
  */
 router.get('/leaderboard/global', requireAuth, async (req: Request, res: Response) => {
+  const endTimer = analyticsResponseTimeHistogram.startTimer({ endpoint: 'leaderboard_global', method: 'GET' });
+  
   try {
     const limit = parseInt(req.query.limit as string) || 50;
     const category = req.query.category as string || 'overall';
+    
+    // メトリクス記録
+    leaderboardRequestsCounter.inc({ 
+      category, 
+      user_id: (req as any).user?.id || 'anonymous' 
+    });
 
     // 習熟度別ランキング
     if (category === 'proficiency') {
@@ -215,9 +231,19 @@ router.get('/leaderboard/global', requireAuth, async (req: Request, res: Respons
         }))
       }
     });
+    
+    endTimer();
 
   } catch (error) {
     console.error('全体リーダーボード取得エラー:', error);
+    endTimer();
+    
+    // エラーメトリクス記録
+    analyticsErrorsCounter.inc({ 
+      error_type: 'leaderboard_global_error', 
+      endpoint: 'leaderboard_global' 
+    });
+    
     res.status(500).json({
       success: false,
       message: 'サーバーエラーが発生しました'
@@ -230,10 +256,18 @@ router.get('/leaderboard/global', requireAuth, async (req: Request, res: Respons
  * GET /api/analytics/leaderboard/team/:teamId
  */
 router.get('/leaderboard/team/:teamId', requireAuth, async (req: Request, res: Response) => {
+  const endTimer = analyticsResponseTimeHistogram.startTimer({ endpoint: 'leaderboard_team', method: 'GET' });
+  
   try {
     const { teamId } = req.params;
     const currentUserId = req.session.userId;
     const currentUserRole = req.session.role;
+    
+    // メトリクス記録
+    teamPerformanceAnalysisCounter.inc({ 
+      team_id: teamId, 
+      analysis_type: 'leaderboard' 
+    });
 
     // チームへのアクセス権限確認
     const team = await prisma.team.findUnique({

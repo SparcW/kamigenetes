@@ -1,0 +1,305 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "🎓 試験API監視ダッシュボード",
+    "tags": ["kubernetes", "learning", "exam", "api", "assessment"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "📝 試験活動統計",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(exam_starts_total[5m]))",
+            "legendFormat": "試験開始/秒"
+          },
+          {
+            "expr": "sum(rate(exam_completions_total[5m]))",
+            "legendFormat": "試験完了/秒"
+          },
+          {
+            "expr": "sum(rate(exam_completions_total{passed=\"true\"}[5m]))",
+            "legendFormat": "合格数/秒"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "displayMode": "list",
+              "orientation": "horizontal"
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "✅ 試験合格率",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "sum(rate(exam_completions_total{passed=\"true\"}[5m])) / sum(rate(exam_completions_total[5m])) * 100",
+            "legendFormat": "合格率"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 60},
+                {"color": "green", "value": 80}
+              ]
+            },
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "📊 試験スコア分布",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "sum by (le) (rate(exam_scores_bucket[5m]))",
+            "legendFormat": "{{le}} 点"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "⏱️ 試験所要時間分布",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "sum by (le) (rate(exam_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{le}} 秒"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "📚 カテゴリ別試験実施状況",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (category) (exam_starts_total)",
+            "legendFormat": "{{category}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            },
+            "mappings": []
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "🎯 難易度別パフォーマンス",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum by (difficulty) (rate(exam_completions_total{passed=\"true\"}[5m])) / sum by (difficulty) (rate(exam_completions_total[5m])) * 100",
+            "legendFormat": "難易度{{difficulty}} 合格率"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {"type": "linear"},
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {"group": "A", "mode": "none"},
+              "thresholdsStyle": {"mode": "off"}
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "⚡ 試験API応答時間",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(api_response_time_seconds_bucket{api_name=\"exam\"}[5m]))",
+            "legendFormat": "P95応答時間"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1.0},
+                {"color": "red", "value": 2.0}
+              ]
+            },
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "❌ 試験エラー率",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(api_errors_total{api_name=\"exam\"}[5m])) / sum(rate(api_response_time_seconds_count{api_name=\"exam\"}[5m])) * 100",
+            "legendFormat": "エラー率"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "📋 試験統計サマリー",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by (category) (increase(exam_starts_total[1h]))",
+            "legendFormat": "開始数 - {{category}}"
+          },
+          {
+            "expr": "sum by (category) (increase(exam_completions_total[1h]))",
+            "legendFormat": "完了数 - {{category}}"
+          },
+          {
+            "expr": "avg by (category) (exam_scores)",
+            "legendFormat": "平均スコア - {{category}}"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 20},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": []
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 30,
+    "version": 1,
+    "links": []
+  },
+  "meta": {
+    "type": "db",
+    "canSave": true,
+    "canEdit": true,
+    "canAdmin": true,
+    "canStar": true,
+    "slug": "exam-api-dashboard",
+    "url": "/d/exam-api-dashboard/exam-api-dashboard",
+    "expires": "0001-01-01T00:00:00Z",
+    "created": "2025-07-05T00:00:00Z",
+    "updated": "2025-07-05T00:00:00Z",
+    "updatedBy": "admin",
+    "createdBy": "admin",
+    "version": 1,
+    "hasAcl": false,
+    "isFolder": false,
+    "folderId": 0,
+    "folderTitle": "General",
+    "folderUrl": "",
+    "provisioned": true,
+    "provisionedExternalId": ""
+  }
+}

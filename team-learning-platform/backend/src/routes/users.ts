@@ -3,6 +3,16 @@ import { PrismaClient } from '@prisma/client';
 import { body, validationResult } from 'express-validator';
 import bcrypt from 'bcrypt';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { 
+  userListRequestsCounter, 
+  userCreationCounter, 
+  userUpdateCounter, 
+  userDeletionCounter,
+  passwordChangeCounter,
+  userProfileRequestsCounter,
+  usersErrorsCounter,
+  usersResponseTimeHistogram
+} from '../lib/metrics';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -12,11 +22,20 @@ const prisma = new PrismaClient();
  * GET /api/users
  */
 router.get('/', requireAuth, requireRole(['super_admin', 'team_manager']), async (req: Request, res: Response) => {
+  const endTimer = usersResponseTimeHistogram.startTimer({ endpoint: 'users_list', method: 'GET' });
+  
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const search = req.query.search as string || '';
     const role = req.query.role as string || '';
+    
+    // メトリクス記録
+    userListRequestsCounter.inc({ 
+      search_type: search ? 'with_search' : 'without_search',
+      role_filter: role || 'all',
+      user_id: (req as any).session?.userId || 'anonymous'
+    });
 
     const skip = (page - 1) * limit;
 

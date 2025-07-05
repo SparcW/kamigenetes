@@ -4,6 +4,12 @@ import bcrypt from 'bcrypt';
 // import { PrismaClient } from '@prisma/client';
 import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
+import {
+  loginAttemptsCounter,
+  sessionDurationHistogram,
+  httpErrorsTotal,
+  httpRequestDuration
+} from '../lib/metrics';
 
 // 型定義は自動的に読み込まれるため、インポート文を削除
 
@@ -52,9 +58,12 @@ router.post('/login',
     body('password').isLength({ min: 1 }).withMessage('パスワードは必須です')
   ],
   async (req: Request, res: Response) => {
+    const startTime = Date.now();
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        loginAttemptsCounter.labels('failure', 'local').inc();
+        httpErrorsTotal.labels('POST', '/auth/login', '400', 'validation_error').inc();
         return res.status(400).json({
           success: false,
           errors: errors.array()
@@ -69,6 +78,8 @@ router.post('/login',
       );
 
       if (!user || !user.passwordHash) {
+        loginAttemptsCounter.labels('failure', 'local').inc();
+        httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
         return res.status(401).json({
           success: false,
           message: 'ユーザー名またはパスワードが正しくありません'
@@ -78,6 +89,8 @@ router.post('/login',
       // パスワード検証
       const isValidPassword = await bcrypt.compare(password, user.passwordHash);
       if (!isValidPassword) {
+        loginAttemptsCounter.labels('failure', 'local').inc();
+        httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
         return res.status(401).json({
           success: false,
           message: 'ユーザー名またはパスワードが正しくありません'
@@ -95,6 +108,11 @@ router.post('/login',
       (req.session as any).username = user.username;
       (req.session as any).role = user.role;
       (req.session as any).teamIds = user.teamMemberships.map((tm: TeamMembership) => tm.teamId || tm.team?.id || '');
+      (req.session as any).loginTime = Date.now();
+
+      // メトリクス記録
+      loginAttemptsCounter.labels('success', 'local').inc();
+      httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
 
       res.json({
         success: true,
@@ -115,6 +133,12 @@ router.post('/login',
 
     } catch (error) {
       console.error('ログインエラー:', error);
+      
+      // エラーメトリクス記録
+      loginAttemptsCounter.labels('failure', 'local').inc();
+      httpErrorsTotal.labels("POST", "/auth/login", "500", "server_error").inc();
+      httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
+      
       res.status(500).json({
         success: false,
         message: 'サーバーエラーが発生しました'
@@ -225,14 +249,32 @@ router.post('/register',
  * POST /api/auth/logout
  */
 router.post('/logout', (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const loginTime = (req.session as any)?.loginTime;
+  const userRole = (req.session as any)?.role || 'user';
+  
+  // セッション継続時間を記録
+  if (loginTime) {
+    const sessionDuration = (Date.now() - loginTime) / 1000;
+    sessionDurationHistogram.labels(userRole).observe(sessionDuration);
+  }
+  
   req.session.destroy((err: any) => {
     if (err) {
       console.error('セッション削除エラー:', err);
+      
+      // エラーメトリクス記録
+      httpErrorsTotal.labels("POST", "/auth/login", "500", "server_error").inc();
+      httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
+      
       return res.status(500).json({
         success: false,
         message: 'ログアウトに失敗しました'
       });
     }
+    
+    // 成功メトリクス記録
+    httpRequestDuration.labels("POST", "/auth/login", "200").observe((Date.now() - startTime) / 1000);
     
     res.clearCookie('connect.sid');
     res.json({

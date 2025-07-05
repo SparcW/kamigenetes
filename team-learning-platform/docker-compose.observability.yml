@@ -210,4 +210,5 @@ volumes:
 
 networks:
   team-learning-network:
-    driver: bridge
+    external: true
+    name: team-learning-platform_team-learning-network

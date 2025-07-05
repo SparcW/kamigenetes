@@ -10,6 +10,14 @@ import {
   ExamSubmitResponse 
 } from '../types/exam';
 import { sampleExams } from '../data/sampleExams';
+import {
+  examStartCounter,
+  examCompletionCounter,
+  examScoreHistogram,
+  examDurationHistogram,
+  httpErrorsTotal,
+  httpRequestDuration
+} from '../lib/metrics';
 
 const router = express.Router();
 
@@ -88,6 +96,7 @@ router.get('/:id', requireAuth, (req: express.Request, res: express.Response) =>
 
 // POST /api/exams/:id/start - 試験開始
 router.post('/:id/start', requireAuth, (req: express.Request, res: express.Response) => {
+  const startTime = Date.now();
   try {
     const { id } = req.params;
     const userId = (req.session as any)?.userId as string;
@@ -95,6 +104,8 @@ router.post('/:id/start', requireAuth, (req: express.Request, res: express.Respo
     const exam = sampleExams.find((e: Exam) => e.id === id && e.isActive);
     
     if (!exam) {
+      httpErrorsTotal.labels("POST", "/exam", "500", "server_error").inc();
+      httpRequestDuration.labels("POST", "/exam", "200").observe((Date.now() - startTime) / 1000);
       return res.status(404).json({ success: false, message: '試験が見つかりません' });
     }
     
@@ -104,6 +115,8 @@ router.post('/:id/start', requireAuth, (req: express.Request, res: express.Respo
     );
     
     if (existingSession) {
+      httpErrorsTotal.labels("POST", "/exam", "500", "server_error").inc();
+      httpRequestDuration.labels("POST", "/exam", "200").observe((Date.now() - startTime) / 1000);
       return res.status(400).json({ 
         success: false, 
         message: '既に試験が開始されています' 
@@ -139,6 +152,10 @@ router.post('/:id/start', requireAuth, (req: express.Request, res: express.Respo
       }))
     };
     
+    // メトリクス記録
+    examStartCounter.labels(exam.category || 'unknown', exam.category, exam.difficulty.toString()).inc();
+    httpRequestDuration.labels("POST", "/exam", "200").observe((Date.now() - startTime) / 1000);
+    
     const response: ExamStartResponse = {
       success: true,
       sessionId,
@@ -149,12 +166,18 @@ router.post('/:id/start', requireAuth, (req: express.Request, res: express.Respo
     res.json(response);
   } catch (error) {
     console.error('試験開始エラー:', error);
+    
+    // エラーメトリクス記録
+    httpErrorsTotal.labels("POST", "/exam", "500", "server_error").inc();
+    httpRequestDuration.labels("POST", "/exam", "200").observe((Date.now() - startTime) / 1000);
+    
     res.status(500).json({ success: false, message: '内部サーバーエラー' });
   }
 });
 
 // POST /api/exams/:id/submit - 試験回答提出
 router.post('/:id/submit', requireAuth, (req: express.Request, res: express.Response) => {
+  const startTime = Date.now();
   try {
     const { id } = req.params;
     const userId = (req.session as any)?.userId as string;
@@ -233,6 +256,12 @@ router.post('/:id/submit', requireAuth, (req: express.Request, res: express.Resp
     };
     
     examAttempts.push(attempt);
+    
+    // メトリクス記録
+    examCompletionCounter.labels(exam.category, exam.category, passed ? 'true' : 'false').inc();
+    examScoreHistogram.labels(exam.category, exam.category).observe(percentage);
+    examDurationHistogram.labels(exam.category, exam.category).observe(timeSpent);
+    httpRequestDuration.labels("POST", "/exam", "200").observe((Date.now() - startTime) / 1000);
     
     const response: ExamSubmitResponse = {
       success: true,
