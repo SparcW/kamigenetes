@@ -287,8 +287,9 @@ router.post('/', requireAuth, [
 
     // メトリクス記録
     const userIdLabel = (req.session as any).userId || 'anonymous';
-    progressUpdateCounter.labels(userIdLabel, document.category, isCompletion).inc();
-    readingTimeHistogram.labels(document.category, userIdLabel).observe(totalReadingTime);
+    const categoryLabel = progress.document.category || 'unknown';
+    progressUpdateCounter.labels(userIdLabel, categoryLabel, isCompletion).inc();
+    readingTimeHistogram.labels(categoryLabel, userIdLabel).observe(totalReadingTime);
     progressResponseTime.labels('update', 'post').observe((Date.now() - startTime) / 1000);
     httpRequestDuration.labels('GET', '/progress', '200').observe((Date.now() - startTime) / 1000);
 
