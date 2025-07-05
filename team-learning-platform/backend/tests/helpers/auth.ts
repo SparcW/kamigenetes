@@ -8,19 +8,19 @@ export const testUsers = {
     email: 'admin@test.com',
     username: 'admin_user',
     password: 'admin_password123',
-    role: 'admin' as const
+    role: 'SUPER_ADMIN' as const
   },
   instructor: {
     email: 'instructor@test.com',
     username: 'instructor_user',
     password: 'instructor_password123',
-    role: 'instructor' as const
+    role: 'TEAM_MANAGER' as const
   },
   learner: {
     email: 'learner@test.com',
     username: 'learner_user',
     password: 'learner_password123',
-    role: 'learner' as const
+    role: 'USER' as const
   }
 };
 
@@ -29,13 +29,14 @@ export const createAndLoginUser = async (app: any, userType: keyof typeof testUs
   const userData = testUsers[userType];
   
   // パスワードハッシュ化
-  const password_hash = await bcrypt.hash(userData.password, 1);
+  const passwordHash = await bcrypt.hash(userData.password, 1);
   
   // ユーザー作成
   const user = await createTestUser({
     email: userData.email,
     username: userData.username,
-    password_hash,
+    passwordHash,
+    displayName: userData.username,
     role: userData.role
   });
   

@@ -105,14 +105,15 @@ describe('分析API テスト', () => {
       const instructor = await createTestUser({
         email: 'instructor@test.com',
         username: 'instructor',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'instructor'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Instructor',
+        role: 'TEAM_MANAGER'
       });
       
       const team = await createTestTeam({
         name: 'Test Team',
         description: 'Test Description',
-        instructor_id: instructor.id
+        createdBy: instructor.id
       });
 
       const response = await request(app)
@@ -163,8 +164,9 @@ describe('分析API テスト', () => {
       const targetUser = await createTestUser({
         email: 'target@test.com',
         username: 'targetuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const response = await request(app)
@@ -181,8 +183,9 @@ describe('分析API テスト', () => {
       const targetUser = await createTestUser({
         email: 'target@test.com',
         username: 'targetuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const response = await request(app)
@@ -239,14 +242,15 @@ describe('分析API テスト', () => {
       const instructor = await createTestUser({
         email: 'instructor@test.com',
         username: 'instructor',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'instructor'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Instructor',
+        role: 'TEAM_MANAGER'
       });
       
       const team = await createTestTeam({
         name: 'Test Team',
         description: 'Test Description',
-        instructor_id: instructor.id
+        createdBy: instructor.id
       });
 
       const response = await request(app)

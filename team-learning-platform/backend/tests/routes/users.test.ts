@@ -28,15 +28,17 @@ describe('ユーザー管理API テスト', () => {
       await createTestUser({
         email: 'user1@test.com',
         username: 'user1',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'User 1',
+        role: 'USER'
       });
 
       await createTestUser({
         email: 'user2@test.com',
         username: 'user2',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'instructor'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'User 2',
+        role: 'TEAM_MANAGER'
       });
 
       const response = await request(app)
@@ -75,8 +77,9 @@ describe('ユーザー管理API テスト', () => {
       await createTestUser({
         email: 'search@test.com',
         username: 'searchuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const response = await request(app)
@@ -122,8 +125,9 @@ describe('ユーザー管理API テスト', () => {
       const targetUser = await createTestUser({
         email: 'target@test.com',
         username: 'targetuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const response = await request(app)
@@ -140,8 +144,9 @@ describe('ユーザー管理API テスト', () => {
       const targetUser = await createTestUser({
         email: 'target@test.com',
         username: 'targetuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const response = await request(app)
@@ -214,8 +219,9 @@ describe('ユーザー管理API テスト', () => {
       await createTestUser({
         email: 'existing@test.com',
         username: 'existinguser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const newUserData = {
@@ -304,8 +310,9 @@ describe('ユーザー管理API テスト', () => {
       const targetUser = await createTestUser({
         email: 'target@test.com',
         username: 'targetuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const updateData = {
@@ -329,8 +336,9 @@ describe('ユーザー管理API テスト', () => {
       const targetUser = await createTestUser({
         email: 'target@test.com',
         username: 'targetuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const updateData = {
@@ -370,8 +378,9 @@ describe('ユーザー管理API テスト', () => {
       const targetUser = await createTestUser({
         email: 'target@test.com',
         username: 'targetuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const response = await request(app)
@@ -400,8 +409,9 @@ describe('ユーザー管理API テスト', () => {
       const targetUser = await createTestUser({
         email: 'target@test.com',
         username: 'targetuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const response = await request(app)
@@ -455,8 +465,9 @@ describe('ユーザー管理API テスト', () => {
       const targetUser = await createTestUser({
         email: 'target@test.com',
         username: 'targetuser',
-        password_hash: await bcrypt.hash('password123', 1),
-        role: 'learner'
+        passwordHash: await bcrypt.hash('password123', 1),
+        displayName: 'Test User',
+        role: 'USER'
       });
 
       const passwordData = {
