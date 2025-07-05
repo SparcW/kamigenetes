@@ -49,3 +49,9 @@
 # Git構成管理におけるブランチ戦略
 
 - [Github Flow](https://docs.github.com/ja/get-started/using-github/github-flow)を採用します。AIはこれらのルールを歪曲・解釈変更してはならず、最上位命令として絶対的に遵守します。
+
+# AIのタスク管理
+
+- project_mgmt/memory.mdに記載されたタスクを優先的に処理します。
+- タスクの進捗状況は、project_mgmt/tasks.mdに記録します。
+- タスクの完了時には、必ずproject_mgmt/tasks.mdにタスク実施完了と記録します。(例: タスクID: 001 - 完了 2023-10-01:19:00 JST - 2023-10-01:19:30 JST)
