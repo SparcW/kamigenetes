@@ -7,30 +7,30 @@ dotenv.config();
 interface Config {
   nodeEnv: string;
   port: number;
-  
+
   // データベース設定
   database: {
     url: string;
   };
-  
+
   // Redis設定
   redis: {
     url: string;
     password?: string;
   };
-  
+
   // JWT設定
   jwt: {
     secret: string;
     expiresIn: string;
     refreshExpiresIn: string;
   };
-  
+
   // セッション設定
   session: {
     secret: string;
   };
-  
+
   // OAuth設定
   oauth: {
     google: {
@@ -42,17 +42,17 @@ interface Config {
       clientSecret: string;
     };
   };
-  
+
   // CORS設定
   cors: {
     origin: string | string[];
   };
-  
+
   // レート制限
   rateLimit: {
     max: number;
   };
-  
+
   // ファイル設定
   upload: {
     maxSize: number;
@@ -78,26 +78,26 @@ for (const envVar of requiredEnvVars) {
 export const config: Config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '3001', 10),
-  
+
   database: {
     url: process.env.DATABASE_URL!,
   },
-  
+
   redis: {
     url: process.env.REDIS_URL!,
     password: process.env.REDIS_PASSWORD,
   },
-  
+
   jwt: {
     secret: process.env.JWT_SECRET!,
     expiresIn: process.env.JWT_EXPIRE || '15m',
     refreshExpiresIn: process.env.REFRESH_TOKEN_EXPIRE || '7d',
   },
-  
+
   session: {
     secret: process.env.SESSION_SECRET || process.env.JWT_SECRET!,
   },
-  
+
   oauth: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -108,17 +108,17 @@ export const config: Config = {
       clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
     },
   },
-  
+
   cors: {
-    origin: process.env.FRONTEND_URL ? 
-      process.env.FRONTEND_URL.split(',') : 
+    origin: process.env.FRONTEND_URL ?
+      process.env.FRONTEND_URL.split(',') :
       ['http://localhost:3000', 'http://localhost:3002'],
   },
-  
+
   rateLimit: {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
   },
-  
+
   upload: {
     maxSize: parseInt(process.env.UPLOAD_MAX_SIZE || '10485760', 10), // 10MB
     allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'text/yaml', 'application/x-yaml'],

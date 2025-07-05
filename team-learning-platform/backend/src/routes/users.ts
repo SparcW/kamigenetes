@@ -3,15 +3,15 @@ import { PrismaClient } from '@prisma/client';
 import { body, validationResult } from 'express-validator';
 import bcrypt from 'bcrypt';
 import { requireAuth, requireRole } from '../middleware/auth';
-import { 
-  userListRequestsCounter, 
-  userCreationCounter, 
-  userUpdateCounter, 
+import {
+  userListRequestsCounter,
+  userCreationCounter,
+  userUpdateCounter,
   userDeletionCounter,
   passwordChangeCounter,
   userProfileRequestsCounter,
   usersErrorsCounter,
-  usersResponseTimeHistogram
+  usersResponseTimeHistogram,
 } from '../lib/metrics';
 
 const router = Router();
@@ -23,31 +23,31 @@ const prisma = new PrismaClient();
  */
 router.get('/', requireAuth, requireRole(['super_admin', 'team_manager']), async (req: Request, res: Response) => {
   const endTimer = usersResponseTimeHistogram.startTimer({ endpoint: 'users_list', method: 'GET' });
-  
+
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const search = req.query.search as string || '';
     const role = req.query.role as string || '';
-    
+
     // メトリクス記録
-    userListRequestsCounter.inc({ 
+    userListRequestsCounter.inc({
       search_type: search ? 'with_search' : 'without_search',
       role_filter: role || 'all',
-      user_id: (req as any).session?.userId || 'anonymous'
+      user_id: (req as any).session?.userId || 'anonymous',
     });
 
     const skip = (page - 1) * limit;
 
     const whereCondition: any = {
-      isActive: true
+      isActive: true,
     };
 
     if (search) {
       whereCondition.OR = [
         { username: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
-        { displayName: { contains: search, mode: 'insensitive' } }
+        { displayName: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -66,17 +66,17 @@ router.get('/', requireAuth, requireRole(['super_admin', 'team_manager']), async
               team: {
                 select: {
                   id: true,
-                  name: true
-                }
-              }
-            }
-          }
+                  name: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: 'desc',
+        },
       }),
-      prisma.user.count({ where: whereCondition })
+      prisma.user.count({ where: whereCondition }),
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -97,8 +97,8 @@ router.get('/', requireAuth, requireRole(['super_admin', 'team_manager']), async
           teams: user.teamMemberships.map(tm => ({
             id: tm.team.id,
             name: tm.team.name,
-            role: tm.role
-          }))
+            role: tm.role,
+          })),
         })),
         pagination: {
           page,
@@ -106,16 +106,16 @@ router.get('/', requireAuth, requireRole(['super_admin', 'team_manager']), async
           totalCount,
           totalPages,
           hasNext: page < totalPages,
-          hasPrev: page > 1
-        }
-      }
+          hasPrev: page > 1,
+        },
+      },
     });
 
   } catch (error) {
     console.error('ユーザー一覧取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -134,7 +134,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
     if (id !== currentUserId && !['super_admin', 'team_manager'].includes(currentUserRole || '')) {
       return res.status(403).json({
         success: false,
-        message: 'アクセス権限がありません'
+        message: 'アクセス権限がありません',
       });
     }
 
@@ -143,8 +143,8 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
       include: {
         teamMemberships: {
           include: {
-            team: true
-          }
+            team: true,
+          },
         },
         readingProgress: {
           include: {
@@ -152,10 +152,10 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
               select: {
                 id: true,
                 title: true,
-                filePath: true
-              }
-            }
-          }
+                filePath: true,
+              },
+            },
+          },
         },
         proficiencyLevels: {
           include: {
@@ -163,18 +163,18 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
               select: {
                 id: true,
                 title: true,
-                filePath: true
-              }
-            }
-          }
-        }
-      }
+                filePath: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'ユーザーが見つかりません'
+        message: 'ユーザーが見つかりません',
       });
     }
 
@@ -195,24 +195,24 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
           name: tm.team.name,
           description: tm.team.description,
           role: tm.role,
-          joinedAt: tm.joinedAt
+          joinedAt: tm.joinedAt,
         })),
         stats: {
           totalDocuments: user.readingProgress.length,
           completedDocuments: user.readingProgress.filter(p => p.progressPercentage.toNumber() === 100).length,
-          averageProficiency: user.proficiencyLevels.length > 0 
-            ? user.proficiencyLevels.reduce((sum, p) => sum + p.level, 0) / user.proficiencyLevels.length 
+          averageProficiency: user.proficiencyLevels.length > 0
+            ? user.proficiencyLevels.reduce((sum, p) => sum + p.level, 0) / user.proficiencyLevels.length
             : 0,
-          totalReadingTime: user.readingProgress.reduce((sum, p) => sum + p.totalReadingTime, 0)
-        }
-      }
+          totalReadingTime: user.readingProgress.reduce((sum, p) => sum + p.totalReadingTime, 0),
+        },
+      },
     });
 
   } catch (error) {
     console.error('ユーザー詳細取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -243,14 +243,14 @@ router.post('/', requireAuth, requireRole(['super_admin']), [
     .withMessage('表示名は1文字以上100文字以下で入力してください'),
   body('role')
     .isIn(['super_admin', 'team_manager', 'user'])
-    .withMessage('無効な権限です')
+    .withMessage('無効な権限です'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -261,17 +261,17 @@ router.post('/', requireAuth, requireRole(['super_admin']), [
       where: {
         OR: [
           { username: username },
-          { email: email }
-        ]
-      }
+          { email: email },
+        ],
+      },
     });
 
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: existingUser.username === username 
+        message: existingUser.username === username
           ? 'このユーザー名は既に使用されています'
-          : 'このメールアドレスは既に登録されています'
+          : 'このメールアドレスは既に登録されています',
       });
     }
 
@@ -286,8 +286,8 @@ router.post('/', requireAuth, requireRole(['super_admin']), [
         email,
         passwordHash,
         displayName,
-        role
-      }
+        role,
+      },
     });
 
     res.status(201).json({
@@ -299,15 +299,15 @@ router.post('/', requireAuth, requireRole(['super_admin']), [
         displayName: user.displayName,
         role: user.role,
         avatarUrl: user.avatarUrl,
-        createdAt: user.createdAt
-      }
+        createdAt: user.createdAt,
+      },
     });
 
   } catch (error) {
     console.error('ユーザー作成エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -330,14 +330,14 @@ router.put('/:id', requireAuth, [
   body('role')
     .optional()
     .isIn(['super_admin', 'team_manager', 'user'])
-    .withMessage('無効な権限です')
+    .withMessage('無効な権限です'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -349,7 +349,7 @@ router.put('/:id', requireAuth, [
     if (id !== currentUserId && !['super_admin', 'team_manager'].includes(currentUserRole || '')) {
       return res.status(403).json({
         success: false,
-        message: 'アクセス権限がありません'
+        message: 'アクセス権限がありません',
       });
     }
 
@@ -364,7 +364,7 @@ router.put('/:id', requireAuth, [
       if (currentUserRole !== 'super_admin') {
         return res.status(403).json({
           success: false,
-          message: '権限変更はスーパー管理者のみ可能です'
+          message: '権限変更はスーパー管理者のみ可能です',
         });
       }
       updateData.role = role;
@@ -374,7 +374,7 @@ router.put('/:id', requireAuth, [
 
     const user = await prisma.user.update({
       where: { id },
-      data: updateData
+      data: updateData,
     });
 
     res.json({
@@ -386,15 +386,15 @@ router.put('/:id', requireAuth, [
         displayName: user.displayName,
         role: user.role,
         avatarUrl: user.avatarUrl,
-        updatedAt: user.updatedAt
-      }
+        updatedAt: user.updatedAt,
+      },
     });
 
   } catch (error) {
     console.error('ユーザー更新エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -412,7 +412,7 @@ router.delete('/:id', requireAuth, requireRole(['super_admin']), async (req: Req
     if (id === currentUserId) {
       return res.status(400).json({
         success: false,
-        message: '自分自身は削除できません'
+        message: '自分自身は削除できません',
       });
     }
 
@@ -420,20 +420,20 @@ router.delete('/:id', requireAuth, requireRole(['super_admin']), async (req: Req
       where: { id },
       data: {
         isActive: false,
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     });
 
     res.json({
       success: true,
-      message: 'ユーザーを削除しました'
+      message: 'ユーザーを削除しました',
     });
 
   } catch (error) {
     console.error('ユーザー削除エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -450,14 +450,14 @@ router.put('/:id/password', requireAuth, [
     .isLength({ min: 8 })
     .withMessage('新しいパスワードは8文字以上で入力してください')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('新しいパスワードは大文字、小文字、数字を含む必要があります')
+    .withMessage('新しいパスワードは大文字、小文字、数字を含む必要があります'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -468,20 +468,20 @@ router.put('/:id/password', requireAuth, [
     if (id !== currentUserId) {
       return res.status(403).json({
         success: false,
-        message: '他のユーザーのパスワードは変更できません'
+        message: '他のユーザーのパスワードは変更できません',
       });
     }
 
     const { currentPassword, newPassword } = req.body;
 
     const user = await prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!user || !user.passwordHash) {
       return res.status(404).json({
         success: false,
-        message: 'ユーザーが見つかりません'
+        message: 'ユーザーが見つかりません',
       });
     }
 
@@ -490,7 +490,7 @@ router.put('/:id/password', requireAuth, [
     if (!isCurrentPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: '現在のパスワードが正しくありません'
+        message: '現在のパスワードが正しくありません',
       });
     }
 
@@ -502,20 +502,20 @@ router.put('/:id/password', requireAuth, [
       where: { id },
       data: {
         passwordHash: newPasswordHash,
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     });
 
     res.json({
       success: true,
-      message: 'パスワードを変更しました'
+      message: 'パスワードを変更しました',
     });
 
   } catch (error) {
     console.error('パスワード変更エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });

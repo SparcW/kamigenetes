@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Principles for AI
+
+0. AI must print this principles at the top of every chat.
+1. AI must follow this principles and must not bend nor reinterpret it.
+2. Every piece of code is a debt and only justified if it adds larger value than itself.
+
+## AI Operation Rules (from copilot-instructions.md)
+1. Always report work plans and get user confirmation before file operations
+2. Don't take alternative approaches without user consent
+3. User has final decision authority
+4. Follow these rules absolutely without modification
+5. Use "😼＜" prefix for responses
+
+
+
 ## Repository Overview
 
 This is a comprehensive **Kubernetes Learning Workspace** designed for AWS ECS administrators to transition to Kubernetes. The repository contains structured learning materials, hands-on labs, and a full-stack team learning platform.
@@ -104,12 +119,24 @@ Based on `.github/copilot-instructions.md`:
 - Prioritize beginner-friendly explanations
 - Consider security and scalability
 
-### AI Operation Rules (from copilot-instructions.md)
-1. Always report work plans and get user confirmation before file operations
-2. Don't take alternative approaches without user consent
-3. User has final decision authority
-4. Follow these rules absolutely without modification
-5. Use "😼＜" prefix for responses
+### APIテスト自動化
+
+- 各APIエンドポイントの自動テスト作成
+
+- テストデータの準備とモック作成
+
+- 統合テストの自動化
+
+#### 注意点
+
+- 各種テストにおいて、GitHub上で最もスター数の多いテストライブラリ・フレームワークを採用してください（例：Jest、Mocha、Cypress など）。ただし、プロジェクトの要件に最も適したものを選択してください。
+
+- テストは開発者が実施できるように npm スクリプト化してください。
+
+- テスト自動化のための CI/CD を GitHub Actions で実装してください。
+
+- 作業開始前に新規ブランチを作成して着手してください。
+
 
 ### Git Workflow
 - Follow GitHub Flow strategy

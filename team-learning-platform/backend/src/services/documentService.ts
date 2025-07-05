@@ -34,13 +34,13 @@ export class DocumentService {
         if (entry.isDirectory()) {
           const categoryPath = path.join(this.docsPath, entry.name);
           const files = await this.getFilesInCategory(entry.name);
-          
+
           categories.push({
             id: entry.name,
             name: this.getCategoryDisplayName(entry.name),
             description: this.getCategoryDescription(entry.name),
             icon: this.getCategoryIcon(entry.name),
-            files: files
+            files: files,
           });
         }
       }
@@ -49,12 +49,12 @@ export class DocumentService {
       return categories.sort((a, b) => {
         const aIndex = categoryOrder.indexOf(a.id);
         const bIndex = categoryOrder.indexOf(b.id);
-        
+
         // 定義されていないカテゴリは最後に配置
         if (aIndex === -1 && bIndex === -1) return a.id.localeCompare(b.id);
         if (aIndex === -1) return 1;
         if (bIndex === -1) return -1;
-        
+
         return aIndex - bIndex;
       });
     } catch (error) {
@@ -76,14 +76,14 @@ export class DocumentService {
         if (entry.isFile() && entry.name.endsWith('.md')) {
           const filePath = path.join(categoryPath, entry.name);
           const stats = await stat(filePath);
-          
+
           files.push({
             id: entry.name.replace('.md', ''),
             name: entry.name,
             title: await this.extractTitle(filePath),
             path: `${categoryId}/${entry.name}`,
             lastModified: stats.mtime,
-            size: stats.size
+            size: stats.size,
           });
         }
       }
@@ -111,7 +111,7 @@ export class DocumentService {
         content: content,
         lastModified: stats.mtime,
         category: categoryId,
-        hasMermaid: content.includes('```mermaid')
+        hasMermaid: content.includes('```mermaid'),
       };
     } catch (error) {
       console.error(`ドキュメント ${categoryId}/${fileName} の取得に失敗しました:`, error);
@@ -148,10 +148,10 @@ export class DocumentService {
       return results.sort((a, b) => {
         const aTitle = a.title.toLowerCase().includes(searchQuery);
         const bTitle = b.title.toLowerCase().includes(searchQuery);
-        
+
         if (aTitle && !bTitle) return -1;
         if (!aTitle && bTitle) return 1;
-        
+
         return a.title.localeCompare(b.title);
       });
     } catch (error) {
@@ -169,21 +169,21 @@ export class DocumentService {
 
     try {
       const entries = await readdir(categoryPath, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         if (entry.isFile() && entry.name.endsWith('.md')) {
           const filePath = path.join(categoryPath, entry.name);
           const content = await readFile(filePath, 'utf8');
-          
+
           // タイトルまたは内容に検索クエリが含まれているかチェック
           const title = await this.extractTitle(filePath);
           const titleMatch = title.toLowerCase().includes(query);
           const contentMatch = content.toLowerCase().includes(query);
-          
+
           if (titleMatch || contentMatch) {
             const stats = await stat(filePath);
             const snippet = this.extractSnippet(content, query);
-            
+
             results.push({
               id: entry.name.replace('.md', ''),
               name: entry.name,
@@ -192,7 +192,7 @@ export class DocumentService {
               lastModified: stats.mtime,
               size: stats.size,
               category: categoryId,
-              snippet: snippet
+              snippet: snippet,
             });
           }
         }
@@ -215,15 +215,15 @@ export class DocumentService {
       for (const category of categories) {
         for (const file of category.files) {
           const content = await this.getDocumentContent(category.id, file.name);
-          
+
           // マークダウンからタグを抽出（例: #tag1 #tag2 形式）
           const fileTags = this.extractTags(content.content);
-          
+
           // 指定されたタグのいずれかが含まれているかチェック
-          const hasMatchingTag = tags.some(tag => 
-            fileTags.some(fileTag => fileTag.toLowerCase().includes(tag.toLowerCase()))
+          const hasMatchingTag = tags.some(tag =>
+            fileTags.some(fileTag => fileTag.toLowerCase().includes(tag.toLowerCase())),
           );
-          
+
           if (hasMatchingTag) {
             results.push({
               id: file.id,
@@ -233,7 +233,7 @@ export class DocumentService {
               lastModified: file.lastModified,
               size: file.size,
               category: category.id,
-              snippet: this.extractSnippet(content.content, tags[0])
+              snippet: this.extractSnippet(content.content, tags[0]),
             });
           }
         }
@@ -253,11 +253,11 @@ export class DocumentService {
     const tagRegex = /(?:^|\s)#([a-zA-Z0-9_-]+)/g;
     const tags: string[] = [];
     let match;
-    
+
     while ((match = tagRegex.exec(content)) !== null) {
       tags.push(match[1]);
     }
-    
+
     return tags;
   }
 
@@ -268,13 +268,13 @@ export class DocumentService {
     try {
       const content = await readFile(filePath, 'utf-8');
       const lines = content.split('\n');
-      
+
       for (const line of lines) {
         if (line.startsWith('# ')) {
           return line.substring(2).trim();
         }
       }
-      
+
       return path.basename(filePath, '.md');
     } catch (error) {
       return path.basename(filePath, '.md');
@@ -290,9 +290,9 @@ export class DocumentService {
       'tutorials': '🏃 チュートリアル',
       'tasks': '📋 タスク',
       'setup': '🚀 セットアップ',
-      'reference': '📚 リファレンス'
+      'reference': '📚 リファレンス',
     };
-    
+
     return displayNames[categoryId] || categoryId;
   }
 
@@ -305,9 +305,9 @@ export class DocumentService {
       'tutorials': 'ステップバイステップの実践的な学習',
       'tasks': '特定の問題解決と運用タスク',
       'setup': 'Kubernetes環境の構築と設定',
-      'reference': 'API、CLI、設定の詳細リファレンス'
+      'reference': 'API、CLI、設定の詳細リファレンス',
     };
-    
+
     return descriptions[categoryId] || '';
   }
 
@@ -320,9 +320,9 @@ export class DocumentService {
       'tutorials': '🏃',
       'tasks': '📋',
       'setup': '🚀',
-      'reference': '📚'
+      'reference': '📚',
     };
-    
+
     return icons[categoryId] || '📄';
   }
 
@@ -335,7 +335,7 @@ export class DocumentService {
 
     const start = Math.max(0, index - 50);
     const end = Math.min(content.length, index + query.length + 50);
-    
+
     return content.substring(start, end).trim();
   }
 
@@ -348,14 +348,14 @@ export class DocumentService {
       'concepts': [
         'README.md',
         'overview.md',
-        'cluster-architecture.md', 
+        'cluster-architecture.md',
         'workloads.md',
         'configuration.md',
         'security.md',
         'storage.md',
         'networking.md',
         'observability.md',
-        'scaling-automation.md'
+        'scaling-automation.md',
       ],
       'tutorials': [
         'README.md',
@@ -365,7 +365,7 @@ export class DocumentService {
         'stateful-application.md',
         'service-connection.md',
         'configuration.md',
-        'security.md'
+        'security.md',
       ],
       'tasks': [
         'README.md',
@@ -376,20 +376,20 @@ export class DocumentService {
         'manage-objects.md',
         'manage-secrets.md',
         'run-applications.md',
-        'networking.md'
+        'networking.md',
       ],
       'setup': [
         'README.md',
         'learning-environment.md',
         'production-environment.md',
         'tool-configuration.md',
-        'security-configuration.md'
+        'security-configuration.md',
       ],
       'reference': [
         'README.md',
         'config-files.md',
-        'glossary.md'
-      ]
+        'glossary.md',
+      ],
     };
 
     const order = fileOrders[categoryId];
@@ -401,12 +401,12 @@ export class DocumentService {
     return files.sort((a, b) => {
       const aIndex = order.indexOf(a.name);
       const bIndex = order.indexOf(b.name);
-      
+
       // 定義されていないファイルは最後に配置
       if (aIndex === -1 && bIndex === -1) return a.name.localeCompare(b.name);
       if (aIndex === -1) return 1;
       if (bIndex === -1) return -1;
-      
+
       return aIndex - bIndex;
     });
   }

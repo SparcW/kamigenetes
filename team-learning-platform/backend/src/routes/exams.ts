@@ -20,7 +20,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
 
     const whereCondition: any = {
-      isActive: true
+      isActive: true,
     };
 
     if (type) {
@@ -42,22 +42,22 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
               id: true,
               title: true,
               filePath: true,
-              difficultyLevel: true
-            }
+              difficultyLevel: true,
+            },
           },
           questions: {
             select: {
               id: true,
               questionType: true,
-              points: true
-            }
-          }
+              points: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: 'desc',
+        },
       }),
-      prisma.exam.count({ where: whereCondition })
+      prisma.exam.count({ where: whereCondition }),
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -76,7 +76,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
           document: exam.document,
           questionCount: exam.questions.length,
           totalPoints: exam.questions.reduce((sum, q) => sum + q.points, 0),
-          createdAt: exam.createdAt
+          createdAt: exam.createdAt,
         })),
         pagination: {
           page,
@@ -84,16 +84,16 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
           totalCount,
           totalPages,
           hasNext: page < totalPages,
-          hasPrev: page > 1
-        }
-      }
+          hasPrev: page > 1,
+        },
+      },
     });
 
   } catch (error) {
     console.error('試験一覧取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -116,8 +116,8 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
             title: true,
             filePath: true,
             difficultyLevel: true,
-            category: true
-          }
+            category: true,
+          },
         },
         questions: {
           select: {
@@ -126,19 +126,19 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
             questionText: true,
             options: true,
             points: true,
-            orderIndex: true
+            orderIndex: true,
           },
           orderBy: {
-            orderIndex: 'asc'
-          }
-        }
-      }
+            orderIndex: 'asc',
+          },
+        },
+      },
     });
 
     if (!exam) {
       return res.status(404).json({
         success: false,
-        message: '試験が見つかりません'
+        message: '試験が見つかりません',
       });
     }
 
@@ -146,12 +146,12 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
     const attempts = await prisma.examAttempt.findMany({
       where: {
         userId: userId,
-        examId: id
+        examId: id,
       },
       orderBy: {
-        createdAt: 'desc'
+        createdAt: 'desc',
       },
-      take: 5
+      take: 5,
     });
 
     res.json({
@@ -171,7 +171,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
           questionText: q.questionText,
           options: q.options,
           points: q.points,
-          orderIndex: q.orderIndex
+          orderIndex: q.orderIndex,
         })),
         attempts: attempts.map(a => ({
           id: a.id,
@@ -179,21 +179,21 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
           totalPoints: a.totalPoints,
           timeTaken: a.timeTaken,
           completedAt: a.completedAt,
-          createdAt: a.createdAt
+          createdAt: a.createdAt,
         })),
         userStats: {
           attemptCount: attempts.length,
           bestScore: attempts.length > 0 ? Math.max(...attempts.map(a => a.score?.toNumber() || 0)) : 0,
-          canAttempt: attempts.length < exam.maxAttempts
-        }
-      }
+          canAttempt: attempts.length < exam.maxAttempts,
+        },
+      },
     });
 
   } catch (error) {
     console.error('試験詳細取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -226,14 +226,14 @@ router.post('/', requireAuth, requireRole(['super_admin', 'team_manager']), [
     .withMessage('合格点は0～100の範囲で設定してください'),
   body('maxAttempts')
     .isInt({ min: 1, max: 10 })
-    .withMessage('最大受験回数は1～10回で設定してください')
+    .withMessage('最大受験回数は1～10回で設定してください'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -241,13 +241,13 @@ router.post('/', requireAuth, requireRole(['super_admin', 'team_manager']), [
 
     // ドキュメントの存在確認
     const document = await prisma.document.findUnique({
-      where: { id: documentId }
+      where: { id: documentId },
     });
 
     if (!document) {
       return res.status(404).json({
         success: false,
-        message: 'ドキュメントが見つかりません'
+        message: 'ドキュメントが見つかりません',
       });
     }
 
@@ -260,17 +260,17 @@ router.post('/', requireAuth, requireRole(['super_admin', 'team_manager']), [
         documentId,
         timeLimit,
         passingScore,
-        maxAttempts
+        maxAttempts,
       },
       include: {
         document: {
           select: {
             id: true,
             title: true,
-            filePath: true
-          }
-        }
-      }
+            filePath: true,
+          },
+        },
+      },
     });
 
     res.status(201).json({
@@ -284,15 +284,15 @@ router.post('/', requireAuth, requireRole(['super_admin', 'team_manager']), [
         passingScore: exam.passingScore,
         maxAttempts: exam.maxAttempts,
         document: exam.document,
-        createdAt: exam.createdAt
-      }
+        createdAt: exam.createdAt,
+      },
     });
 
   } catch (error) {
     console.error('試験作成エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -317,19 +317,19 @@ router.post('/:id/attempts', requireAuth, async (req: Request, res: Response) =>
             questionText: true,
             options: true,
             points: true,
-            orderIndex: true
+            orderIndex: true,
           },
           orderBy: {
-            orderIndex: 'asc'
-          }
-        }
-      }
+            orderIndex: 'asc',
+          },
+        },
+      },
     });
 
     if (!exam) {
       return res.status(404).json({
         success: false,
-        message: '試験が見つかりません'
+        message: '試験が見つかりません',
       });
     }
 
@@ -337,14 +337,14 @@ router.post('/:id/attempts', requireAuth, async (req: Request, res: Response) =>
     const attemptCount = await prisma.examAttempt.count({
       where: {
         userId: userId,
-        examId: examId
-      }
+        examId: examId,
+      },
     });
 
     if (attemptCount >= exam.maxAttempts) {
       return res.status(403).json({
         success: false,
-        message: '受験回数の上限に達しています'
+        message: '受験回数の上限に達しています',
       });
     }
 
@@ -354,8 +354,8 @@ router.post('/:id/attempts', requireAuth, async (req: Request, res: Response) =>
         userId: userId!,
         examId: examId,
         answers: {},
-        totalPoints: exam.questions.reduce((sum, q) => sum + q.points, 0)
-      }
+        totalPoints: exam.questions.reduce((sum, q) => sum + q.points, 0),
+      },
     });
 
     res.status(201).json({
@@ -374,19 +374,19 @@ router.post('/:id/attempts', requireAuth, async (req: Request, res: Response) =>
             questionText: q.questionText,
             options: q.options,
             points: q.points,
-            orderIndex: q.orderIndex
-          }))
+            orderIndex: q.orderIndex,
+          })),
         },
         startTime: attempt.createdAt,
-        timeLimit: exam.timeLimit
-      }
+        timeLimit: exam.timeLimit,
+      },
     });
 
   } catch (error) {
     console.error('試験受験開始エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -402,14 +402,14 @@ router.put('/:id/attempts/:attemptId/submit', requireAuth, [
   body('kubectlLogs')
     .optional()
     .isString()
-    .withMessage('kubectlログは文字列で入力してください')
+    .withMessage('kubectlログは文字列で入力してください'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -423,23 +423,23 @@ router.put('/:id/attempts/:attemptId/submit', requireAuth, [
       include: {
         exam: {
           include: {
-            questions: true
-          }
-        }
-      }
+            questions: true,
+          },
+        },
+      },
     });
 
     if (!attempt || attempt.userId !== userId || attempt.examId !== examId) {
       return res.status(404).json({
         success: false,
-        message: '受験記録が見つかりません'
+        message: '受験記録が見つかりません',
       });
     }
 
     if (attempt.completedAt) {
       return res.status(400).json({
         success: false,
-        message: '既に提出済みです'
+        message: '既に提出済みです',
       });
     }
 
@@ -462,8 +462,8 @@ router.put('/:id/attempts/:attemptId/submit', requireAuth, [
         if (userAnswer && typeof userAnswer === 'string') {
           // 基本的なYAMLキーワードの存在チェック
           const requiredKeywords = ['apiVersion', 'kind', 'metadata', 'spec'];
-          const foundKeywords = requiredKeywords.filter(keyword => 
-            userAnswer.includes(keyword)
+          const foundKeywords = requiredKeywords.filter(keyword =>
+            userAnswer.includes(keyword),
           );
           score = (foundKeywords.length / requiredKeywords.length) * question.points;
         }
@@ -488,8 +488,8 @@ router.put('/:id/attempts/:attemptId/submit', requireAuth, [
         kubectlLogs: kubectlLogs,
         score: scorePercentage,
         timeTaken: Math.floor((Date.now() - attempt.createdAt.getTime()) / 1000),
-        completedAt: new Date()
-      }
+        completedAt: new Date(),
+      },
     });
 
     // 習熟度レベルの更新
@@ -505,15 +505,15 @@ router.put('/:id/attempts/:attemptId/submit', requireAuth, [
         passingScore: attempt.exam.passingScore,
         timeTaken: updatedAttempt.timeTaken,
         questionScores: questionScores,
-        completedAt: updatedAttempt.completedAt
-      }
+        completedAt: updatedAttempt.completedAt,
+      },
     });
 
   } catch (error) {
     console.error('試験回答提出エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -528,7 +528,7 @@ router.get('/proficiency', requireAuth, async (req: Request, res: Response) => {
     const documentId = req.query.documentId as string;
 
     const whereCondition: any = {
-      userId: userId
+      userId: userId,
     };
 
     if (documentId) {
@@ -544,13 +544,13 @@ router.get('/proficiency', requireAuth, async (req: Request, res: Response) => {
             title: true,
             filePath: true,
             category: true,
-            difficultyLevel: true
-          }
-        }
+            difficultyLevel: true,
+          },
+        },
       },
       orderBy: {
-        lastUpdated: 'desc'
-      }
+        lastUpdated: 'desc',
+      },
     });
 
     res.json({
@@ -563,19 +563,19 @@ router.get('/proficiency', requireAuth, async (req: Request, res: Response) => {
         practicalScore: pl.practicalScore,
         yamlScore: pl.yamlScore,
         overallScore: calculateOverallScore(
-          pl.conceptScore?.toNumber() || 0, 
-          pl.practicalScore?.toNumber() || 0, 
-          pl.yamlScore?.toNumber() || 0
+          pl.conceptScore?.toNumber() || 0,
+          pl.practicalScore?.toNumber() || 0,
+          pl.yamlScore?.toNumber() || 0,
         ),
-        lastUpdated: pl.lastUpdated
-      }))
+        lastUpdated: pl.lastUpdated,
+      })),
     });
 
   } catch (error) {
     console.error('習熟度レベル取得エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -599,14 +599,14 @@ router.put('/proficiency/:id', requireAuth, requireRole(['super_admin', 'team_ma
   body('yamlScore')
     .optional()
     .isFloat({ min: 0, max: 100 })
-    .withMessage('YAMLスコアは0～100で設定してください')
+    .withMessage('YAMLスコアは0～100で設定してください'),
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        errors: errors.array(),
       });
     }
 
@@ -615,7 +615,7 @@ router.put('/proficiency/:id', requireAuth, requireRole(['super_admin', 'team_ma
 
     const updateData: any = {
       level,
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
     };
 
     if (conceptScore !== undefined) updateData.conceptScore = conceptScore;
@@ -630,10 +630,10 @@ router.put('/proficiency/:id', requireAuth, requireRole(['super_admin', 'team_ma
           select: {
             id: true,
             title: true,
-            filePath: true
-          }
-        }
-      }
+            filePath: true,
+          },
+        },
+      },
     });
 
     res.json({
@@ -645,15 +645,15 @@ router.put('/proficiency/:id', requireAuth, requireRole(['super_admin', 'team_ma
         conceptScore: updatedProficiency.conceptScore,
         practicalScore: updatedProficiency.practicalScore,
         yamlScore: updatedProficiency.yamlScore,
-        lastUpdated: updatedProficiency.lastUpdated
-      }
+        lastUpdated: updatedProficiency.lastUpdated,
+      },
     });
 
   } catch (error) {
     console.error('習熟度レベル更新エラー:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました'
+      message: 'サーバーエラーが発生しました',
     });
   }
 });
@@ -665,21 +665,21 @@ async function updateProficiencyLevel(
   userId: string,
   documentId: string,
   examType: string,
-  score: number
+  score: number,
 ) {
   try {
     // 既存の習熟度レベルを取得
-    let proficiency = await prisma.proficiencyLevel.findUnique({
+    const proficiency = await prisma.proficiencyLevel.findUnique({
       where: {
         userId_documentId: {
           userId: userId,
-          documentId: documentId
-        }
-      }
+          documentId: documentId,
+        },
+      },
     });
 
     const updateData: any = {
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
     };
 
     if (examType === 'concept') {
@@ -701,7 +701,7 @@ async function updateProficiencyLevel(
 
       await prisma.proficiencyLevel.update({
         where: { id: proficiency.id },
-        data: updateData
+        data: updateData,
       });
     } else {
       // 新しい習熟度レベルを作成
@@ -712,11 +712,11 @@ async function updateProficiencyLevel(
         conceptScore: examType === 'concept' ? score : 0,
         practicalScore: examType === 'practical' ? score : 0,
         yamlScore: examType === 'yaml' ? score : 0,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
       };
 
       await prisma.proficiencyLevel.create({
-        data: createData
+        data: createData,
       });
     }
   } catch (error) {

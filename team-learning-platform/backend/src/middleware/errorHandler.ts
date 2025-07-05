@@ -9,39 +9,39 @@ export const errorHandler = (
   err: ApiError,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
-  
+
   // デフォルトエラー情報
-  let error = { ...err };
+  const error = { ...err };
   error.message = err.message;
-  
+
   // Prismaエラーの処理
   if (err.name === 'PrismaClientKnownRequestError') {
     error.statusCode = 400;
     error.message = 'Database operation failed';
   }
-  
+
   // JWT エラーの処理
   if (err.name === 'JsonWebTokenError') {
     error.statusCode = 401;
     error.message = 'Invalid token';
   }
-  
+
   if (err.name === 'TokenExpiredError') {
     error.statusCode = 401;
     error.message = 'Token expired';
   }
-  
+
   // バリデーションエラーの処理
   if (err.name === 'ValidationError') {
     error.statusCode = 400;
     error.message = 'Validation failed';
   }
-  
+
   const statusCode = error.statusCode || 500;
-  
+
   // ログ出力
   if (statusCode >= 500) {
     console.error('❌ Server Error:', {
@@ -60,14 +60,14 @@ export const errorHandler = (
       statusCode,
     });
   }
-  
+
   // レスポンス
   res.status(statusCode).json({
     success: false,
     error: {
       message: error.message,
       statusCode,
-      ...(isDevelopment && { 
+      ...(isDevelopment && {
         stack: err.stack,
         details: err,
       }),
