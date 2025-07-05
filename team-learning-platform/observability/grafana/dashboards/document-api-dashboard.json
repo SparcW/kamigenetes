@@ -1,0 +1,299 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "📚 ドキュメントAPI監視ダッシュボード",
+    "tags": ["kubernetes", "learning", "documents", "api"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "📊 API概要メトリクス",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(document_category_access_total[5m]))",
+            "legendFormat": "カテゴリアクセス/秒"
+          },
+          {
+            "expr": "sum(rate(document_search_total[5m]))",
+            "legendFormat": "検索実行/秒"
+          },
+          {
+            "expr": "sum(rate(document_views_total[5m]))",
+            "legendFormat": "ドキュメント閲覧/秒"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "displayMode": "list",
+              "orientation": "horizontal"
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "🔍 検索パフォーマンス",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(document_search_duration_seconds_bucket[5m]))",
+            "legendFormat": "検索応答時間 P95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(document_search_duration_seconds_bucket[5m]))",
+            "legendFormat": "検索応答時間 P50"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {"type": "linear"},
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {"group": "A", "mode": "none"},
+              "thresholdsStyle": {"mode": "off"}
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            },
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "📈 カテゴリ別アクセス統計",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (category) (document_category_access_total)",
+            "legendFormat": "{{category}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            },
+            "mappings": []
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "🔎 検索結果分布",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "sum by (le) (document_search_results_count_bucket)",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "⚡ API応答時間",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(document_response_time_seconds_bucket[5m]))",
+            "legendFormat": "API応答時間 P95"
+          },
+          {
+            "expr": "avg(rate(document_response_time_seconds_sum[5m]) / rate(document_response_time_seconds_count[5m]))",
+            "legendFormat": "API応答時間 平均"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {"type": "linear"},
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {"group": "A", "mode": "none"},
+              "thresholdsStyle": {"mode": "off"}
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.5},
+                {"color": "red", "value": 1.0}
+              ]
+            },
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "❌ エラー率監視",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(document_errors_total[5m])) / sum(rate(http_requests_total{uri=~\"/api/documents.*\"}[5m])) * 100",
+            "legendFormat": "エラー率 (%)"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "👥 アクティブユーザー",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "active_users_gauge",
+            "legendFormat": "アクティブユーザー数"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "🏷️ タグ検索利用状況",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by (tag_count, has_results) (document_tag_search_total)",
+            "legendFormat": "タグ数: {{tag_count}}, 結果: {{has_results}}"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 12, "x": 12, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": []
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 30,
+    "version": 1,
+    "links": []
+  },
+  "meta": {
+    "type": "db",
+    "canSave": true,
+    "canEdit": true,
+    "canAdmin": true,
+    "canStar": true,
+    "slug": "document-api-dashboard",
+    "url": "/d/document-api-dashboard/document-api-dashboard",
+    "expires": "0001-01-01T00:00:00Z",
+    "created": "2025-07-05T00:00:00Z",
+    "updated": "2025-07-05T00:00:00Z",
+    "updatedBy": "admin",
+    "createdBy": "admin",
+    "version": 1,
+    "hasAcl": false,
+    "isFolder": false,
+    "folderId": 0,
+    "folderTitle": "General",
+    "folderUrl": "",
+    "provisioned": true,
+    "provisionedExternalId": ""
+  }
+}
