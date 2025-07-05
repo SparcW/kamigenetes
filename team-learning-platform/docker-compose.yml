@@ -106,23 +106,6 @@ services:
     networks:
       - team-learning-network
 
-  # 既存のmarkdown-server (統合)
-  markdown-server:
-    build:
-      context: ../markdown-server
-      dockerfile: Dockerfile
-    container_name: team-learning-docs
-    environment:
-      PORT: 3002
-      NODE_ENV: development
-    ports:
-      - "3002:3002"
-    volumes:
-      - ../docs:/docs
-    networks:
-      - team-learning-network
-    command: npm run dev
-
   # Nginx リバースプロキシ (本番用)
   nginx:
     image: nginx:alpine
@@ -136,7 +119,6 @@ services:
     depends_on:
       - frontend
       - backend
-      - markdown-server
     networks:
       - team-learning-network
     profiles:
