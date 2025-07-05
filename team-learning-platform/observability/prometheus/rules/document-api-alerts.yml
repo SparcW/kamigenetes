@@ -1,0 +1,108 @@
+# ドキュメントAPI監視アラート設定
+# team-learning-platform/observability/prometheus/rules/document-api-alerts.yml
+
+groups:
+  - name: document-api-alerts
+    rules:
+      # API応答時間アラート
+      - alert: DocumentAPIHighResponseTime
+        expr: histogram_quantile(0.95, rate(document_response_time_seconds_bucket[5m])) > 1.0
+        for: 2m
+        labels:
+          severity: warning
+          component: document-api
+          team: kubernetes-learning
+        annotations:
+          summary: "ドキュメントAPIの応答時間が高いです"
+          description: "ドキュメントAPIのP95応答時間が {{ $value }}秒になっています（閾値: 1.0秒）"
+          runbook_url: "https://wiki.company.com/runbooks/document-api-slow-response"
+
+      # 検索パフォーマンスアラート
+      - alert: DocumentSearchHighLatency
+        expr: histogram_quantile(0.95, rate(document_search_duration_seconds_bucket[5m])) > 2.0
+        for: 3m
+        labels:
+          severity: warning
+          component: document-search
+          team: kubernetes-learning
+        annotations:
+          summary: "ドキュメント検索の応答時間が高いです"
+          description: "ドキュメント検索のP95応答時間が {{ $value }}秒になっています（閾値: 2.0秒）"
+          runbook_url: "https://wiki.company.com/runbooks/document-search-slow"
+
+      # エラー率アラート
+      - alert: DocumentAPIHighErrorRate
+        expr: |
+          (
+            sum(rate(document_errors_total[5m])) / 
+            sum(rate(http_requests_total{uri=~"/api/documents.*"}[5m]))
+          ) * 100 > 5
+        for: 1m
+        labels:
+          severity: critical
+          component: document-api
+          team: kubernetes-learning
+        annotations:
+          summary: "ドキュメントAPIのエラー率が高いです"
+          description: "ドキュメントAPIのエラー率が {{ $value }}%になっています（閾値: 5%）"
+          runbook_url: "https://wiki.company.com/runbooks/document-api-high-error-rate"
+
+      # 検索結果なしの頻度アラート
+      - alert: DocumentSearchNoResultsHigh
+        expr: |
+          sum(rate(document_search_total{has_results="false"}[10m])) /
+          sum(rate(document_search_total[10m])) * 100 > 50
+        for: 5m
+        labels:
+          severity: warning
+          component: document-search
+          team: kubernetes-learning
+        annotations:
+          summary: "ドキュメント検索で結果なしが多発しています"
+          description: "検索結果なしの割合が {{ $value }}%になっています（閾値: 50%）"
+          runbook_url: "https://wiki.company.com/runbooks/document-search-no-results"
+
+      # カテゴリアクセス異常検知
+      - alert: DocumentCategoryAccessAnomaly
+        expr: |
+          abs(
+            rate(document_category_access_total[5m]) - 
+            rate(document_category_access_total[1h] offset 1h)
+          ) > rate(document_category_access_total[1h] offset 1h) * 2
+        for: 10m
+        labels:
+          severity: info
+          component: document-api
+          team: kubernetes-learning
+        annotations:
+          summary: "ドキュメントカテゴリへのアクセスパターンが異常です"
+          description: "カテゴリ {{ $labels.category }} へのアクセスが通常の2倍以上変化しています"
+          runbook_url: "https://wiki.company.com/runbooks/document-category-access-anomaly"
+
+      # API可用性アラート
+      - alert: DocumentAPIDown
+        expr: up{job="team-learning-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: document-api
+          team: kubernetes-learning
+        annotations:
+          summary: "ドキュメントAPIが停止しています"
+          description: "バックエンドAPIサーバーに到達できません"
+          runbook_url: "https://wiki.company.com/runbooks/api-down"
+
+      # 学習活動低下アラート
+      - alert: LearningActivityLow
+        expr: |
+          sum(rate(document_views_total[1h])) < 1 and
+          sum(rate(document_search_total[1h])) < 0.1
+        for: 30m
+        labels:
+          severity: info
+          component: learning-platform
+          team: kubernetes-learning
+        annotations:
+          summary: "学習活動が低下しています"
+          description: "過去1時間の学習活動（ドキュメント閲覧・検索）が通常より大幅に少なくなっています"
+          runbook_url: "https://wiki.company.com/runbooks/low-learning-activity"

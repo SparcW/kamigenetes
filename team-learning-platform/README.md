@@ -408,31 +408,31 @@ docker-compose up -d
 
 ```bash
 # Elasticsearch
-docker-compose -f docker-compose.observability.yml up elasticsearch -d
+docker-compose -f docker-compose.observability.yml up -d elasticsearch
 
 # Kibana
-docker-compose -f docker-compose.observability.yml up kibana -d
+docker-compose -f docker-compose.observability.yml up -d kibana
 
 # Prometheus
-docker-compose -f docker-compose.observability.yml up prometheus -d
+docker-compose -f docker-compose.observability.yml up -d prometheus
 
 # Grafana
-docker-compose -f docker-compose.observability.yml up grafana -d
+docker-compose -f docker-compose.observability.yml up -d grafana
 
 # Tempo (トレーシング)
-docker-compose -f docker-compose.observability.yml up tempo -d
+docker-compose -f docker-compose.observability.yml up -d tempo
 
 # OpenTelemetry Collector
-docker-compose -f docker-compose.observability.yml up otel-collector -d
+docker-compose -f docker-compose.observability.yml up -d otel-collector
 
 # Filebeat (ログ転送)
-docker-compose -f docker-compose.observability.yml up filebeat -d
+docker-compose -f docker-compose.observability.yml up -d filebeat
 ```
 
 または、一括起動：
 
 ```bash
-docker-compose -f docker-compose.observability.yml up -d
+docker-compose -f docker-compose.observability.yml --profile development up -d
 ```
 
 ### (3) バックエンド導通テスト

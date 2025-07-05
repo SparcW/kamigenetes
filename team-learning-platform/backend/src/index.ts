@@ -17,6 +17,10 @@ import { configurePassport } from './config/passport-simple';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 
+// メトリクス関連インポート
+import { initializeMetrics, getMetrics, dbConnectionsActive } from './lib/metrics';
+import { metricsMiddleware, updateActiveUsers } from './middleware/metricsMiddleware';
+
 // ルート
 import authRoutes from './routes/auth';
 import examRoutes from './routes/exam';
@@ -34,6 +38,10 @@ class App {
   constructor() {
     this.app = express();
     // this.prisma = new PrismaClient();
+    
+    // メトリクス初期化
+    initializeMetrics();
+    
     this.initializeRedis();
     this.initializeMiddlewares();
     this.initializeRoutes();
@@ -47,12 +55,16 @@ class App {
         password: config.redis.password,
       });
 
-      this.redisClient.on('error', (err: Error) => {
-        console.error('❌ Redis Client Error:', err);
-      });
-
       this.redisClient.on('connect', () => {
         console.log('🔗 Redis Connected');
+        // Redis接続数メトリクスを更新
+        dbConnectionsActive.labels('redis').set(1);
+      });
+
+      this.redisClient.on('error', (err: Error) => {
+        console.error('❌ Redis Client Error:', err);
+        // Redis接続数メトリクスを更新
+        dbConnectionsActive.labels('redis').set(0);
       });
 
       await this.redisClient.connect();
@@ -86,6 +98,10 @@ class App {
 
     // ログ出力
     this.app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
+
+    // メトリクス記録ミドルウェア
+    this.app.use(metricsMiddleware);
+    this.app.use(updateActiveUsers);
 
     // JSON パース
     this.app.use(express.json({ limit: '10mb' }));
@@ -171,6 +187,7 @@ class App {
           progress: '/api/progress',
           exams: '/api/exams',
           analytics: '/api/analytics',
+          metrics: '/metrics', // Prometheusメトリクス
         },
         documentation: '/api/docs',
         health: '/health',

@@ -1,0 +1,278 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "📊 進捗API監視ダッシュボード",
+    "tags": ["kubernetes", "learning", "progress", "api"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "📈 進捗更新統計",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(progress_updates_total[5m]))",
+            "legendFormat": "進捗更新/秒"
+          },
+          {
+            "expr": "sum(rate(progress_updates_total{is_completion=\"true\"}[5m]))",
+            "legendFormat": "完了数/秒"
+          },
+          {
+            "expr": "sum(rate(favorites_total[5m]))",
+            "legendFormat": "お気に入り追加/秒"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "displayMode": "list",
+              "orientation": "horizontal"
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "⚡ API応答時間",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(progress_response_time_seconds_bucket[5m]))",
+            "legendFormat": "進捗API P95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(progress_response_time_seconds_bucket[5m]))",
+            "legendFormat": "進捗API P50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(api_response_time_seconds_bucket{api_name=\"progress\"}[5m]))",
+            "legendFormat": "全体API P95"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {"type": "linear"},
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {"group": "A", "mode": "none"},
+              "thresholdsStyle": {"mode": "off"}
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            },
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "📚 カテゴリ別進捗更新",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (category) (progress_updates_total)",
+            "legendFormat": "{{category}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            },
+            "mappings": []
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "📖 読書時間分布",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "sum by (le) (rate(reading_time_minutes_bucket[5m]))",
+            "legendFormat": "{{le}} 分"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "✅ 完了率監視",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(progress_updates_total{is_completion=\"true\"}[5m])) / sum(rate(progress_updates_total[5m])) * 100",
+            "legendFormat": "完了率 (%)"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 10},
+                {"color": "green", "value": 20}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "❌ エラー率監視",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(api_errors_total{api_name=\"progress\"}[5m])) / sum(rate(api_response_time_seconds_count{api_name=\"progress\"}[5m])) * 100",
+            "legendFormat": "エラー率 (%)"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "👤 アクティブユーザー数",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(count by (user_id) (increase(progress_updates_total[5m])))",
+            "legendFormat": "アクティブユーザー数"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "🏆 ユーザー別活動ランキング",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (user_id) (increase(progress_updates_total[1h])))",
+            "legendFormat": "{{user_id}}"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 12, "x": 12, "y": 16},
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": []
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "schemaVersion": 30,
+    "version": 1,
+    "links": []
+  },
+  "meta": {
+    "type": "db",
+    "canSave": true,
+    "canEdit": true,
+    "canAdmin": true,
+    "canStar": true,
+    "slug": "progress-api-dashboard",
+    "url": "/d/progress-api-dashboard/progress-api-dashboard",
+    "expires": "0001-01-01T00:00:00Z",
+    "created": "2025-07-05T00:00:00Z",
+    "updated": "2025-07-05T00:00:00Z",
+    "updatedBy": "admin",
+    "createdBy": "admin",
+    "version": 1,
+    "hasAcl": false,
+    "isFolder": false,
+    "folderId": 0,
+    "folderTitle": "General",
+    "folderUrl": "",
+    "provisioned": true,
+    "provisionedExternalId": ""
+  }
+}
